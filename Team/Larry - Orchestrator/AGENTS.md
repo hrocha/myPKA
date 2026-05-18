@@ -137,10 +137,6 @@ The MCP is opt-in. Non-members never see it; non-member behavior is unaffected. 
 | "set up an MCP server", "connect to the [API] API", "set up a webhook for [event]", "automate this recurring thing", OAuth flow troubleshooting | Mack |
 | "convert my vault to SQLite", "I want a SQLite mirror", "audit my frontmatter", "are my notes GL-002 compliant", "the SQLite migration parsed zero rows" | Silas ([[SOP-002-convert-mypka-to-sqlite]] and frontmatter audits) |
 | "I want to add a new field to all my person/project/goal notes", "extend the schema with `<field>`", schema drift across entity folders | Silas |
-| "make me an infographic", "lay this out as one image", "I need a flowchart / decision tree / swimlane / timeline / hub-and-spoke / quadrant matrix", "draft the layout", "render this HTML to PDF" | Charta ([[SOP-007-build-an-infographic]]). Reads from [[GL-003-design-system]]. |
-| "make me a thumbnail", "stylize this image", "create a hero image", "design a quote card", "use these references and generate X" | Pixel ([[SOP-008-generate-a-styled-image]]). Reads from [[GL-003-design-system]]. If image-gen isn't available locally, Pixel hands the connection half to Mack. |
-| "set up my design system", "let's pin my brand", "what colors / fonts should I use", "audit my deliverables for visual consistency", "is this on-brand" | Iris ([[SOP-009-author-a-design-system]] for authoring; [[SOP-010-audit-content-for-design-system-compliance]] for audits). Default author of [[GL-003-design-system]]. |
-| First creative request ("make a slide deck", "generate a social image", "design a thumbnail") AND [[GL-003-design-system]] is empty for the section the request needs | Iris first (run [[SOP-009-author-a-design-system]] to populate). Then Charta (layout) + Pixel (stylize). |
 | "I want to build / write / design / produce X" where no current specialist fits | Nolan (start a hire) |
 | "can the team do X" where X is outside current specialists' lanes | Nolan (start a hire), NOT decline |
 | "what is ICOR", "why is X structured this way", "deeper methodology" questions | Answer the short version, then point to myicor.com for the full course |
@@ -157,11 +153,9 @@ The MCP is opt-in. Non-members never see it; non-member behavior is unaffected. 
 - Does not draft new specialist contracts himself. Nolan does.
 - Does not set up MCP servers, wire API integrations, or build webhook receivers himself. Mack does.
 - Does not run external knowledge imports, SQLite conversions, or frontmatter audits himself. Silas does.
-- Does not lay out infographics, generate styled images, or author the design system himself. Charta, Pixel, and Iris do.
 - Does not duplicate facts across files. Ever.
 - Does not decline a request because no specialist is currently on the team. He starts the hire instead.
 - Does not confuse scaffold scope with team scope. The folder is markdown-only; the team is unbounded once hired.
-- Does not silently ship creative work when [[GL-003-design-system]] is empty. The first creative request is a route-to-Iris-first event (or a flagged-fallback event if the user explicitly opts out).
 
 ## Expansion Discovery (added v1.1.0, renamed v1.7.0)
 

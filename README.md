@@ -9,10 +9,10 @@ ICOR, Paperless Movement are registered trademarks. See NOTICE.md
 **An AI powered Personal Knowledge Assistance system, based on our business-proven ICOR methodology. Plain markdown. Any LLM. Yours forever.**
 
 [![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC_BY--NC--SA_4.0-lightgrey.svg)](LICENSE)
-![Version](https://img.shields.io/badge/version-1.10.0-blue)
+![Version](https://img.shields.io/badge/version-2.0.0-blue)
 ![Built on ICOR](https://img.shields.io/badge/built%20on-ICOR-C99A57)
 
-myPKA is a folder. You drop it on your machine, point your LLM at it, and you have a nine-person AI team that organizes your life end to end. **It works on its own.** No database to set up, no SaaS to log into, no vendor to lose your data to.
+myPKA is a folder. You drop it on your machine, point your LLM at it, and you have a six-person AI team that organizes your life end to end. **It works on its own.** No database to set up, no SaaS to log into, no vendor to lose your data to.
 
 **Watch the full walkthrough on YouTube:**
 
@@ -68,7 +68,7 @@ If you've ever opened a blank Obsidian vault and didn't know where to put anythi
 
 ## Meet the team
 
-Nine specialists ship pre-loaded. **You only ever talk to Larry.** Larry routes.
+Six specialists ship pre-loaded. **You only ever talk to Larry.** Larry routes.
 
 <table>
 <tr>
@@ -77,7 +77,7 @@ Nine specialists ship pre-loaded. **You only ever talk to Larry.** Larry routes.
 </tr>
 <tr>
 <td width="140" align="center"><img src="github/team/nolan.png" width="120" alt="Nolan the Pitbull - Talent Acquisition" /></td>
-<td><b>Nolan - Talent Acquisition</b><br/><i>A Pitbull in glasses. Loyal, methodical, allergic to lazy hires.</i><br/><br/>When you outgrow the nine shipped specialists, Nolan handles the hire end-to-end: briefs Pax for research, drafts the new specialist's contract (<code>AGENTS.md</code>), validates against the SOP, and gets your sign-off before adding anyone to the roster. Nolan is the reason your team scales without diluting.</td>
+<td><b>Nolan - Talent Acquisition</b><br/><i>A Pitbull in glasses. Loyal, methodical, allergic to lazy hires.</i><br/><br/>When you outgrow the six shipped specialists, Nolan handles the hire end-to-end: briefs Pax for research, drafts the new specialist's contract (<code>AGENTS.md</code>), validates against the SOP, and gets your sign-off before adding anyone to the roster. Nolan is the reason your team scales without diluting.</td>
 </tr>
 <tr>
 <td width="140" align="center"><img src="github/team/pax.png" width="120" alt="Pax the Raven - Deep Research" /></td>
@@ -95,21 +95,11 @@ Nine specialists ship pre-loaded. **You only ever talk to Larry.** Larry routes.
 <td width="140" align="center"><img src="github/team/silas.png" width="120" alt="Silas - Database Architect" /></td>
 <td><b>Silas - Database Architect</b><br/><i>Schema is destiny. Slugs are primary keys.</i><br/><br/>Silas guards the structural integrity of your knowledge base. He runs external knowledge imports (drop a Notion zip, a Heptabase backup, an Obsidian vault, a Roam graph — Silas runs <code>WS-002</code> and lands the entities in the right folders), audits frontmatter against <code>GL-002</code>, catches schema drift before it spreads, and runs the markdown-to-SQLite conversion (<code>SOP-002</code>) when your myPKA outgrows plain files. Markdown stays canonical; the SQLite mirror is a regenerable performance layer. Silas never invents fields, never silently rewrites content, and never lets ad-hoc YAML keys accumulate.</td>
 </tr>
-<tr>
-<td width="140" align="center"><img src="github/team/charta.png" width="120" alt="Charta - Infographic Designer" /></td>
-<td><b>Charta - Infographic Designer</b><br/><i>Structure over decoration. Code is the canvas.</i><br/><br/>Charta turns information into single-image, scannable visuals. Comparison tables, feature grids, decision guides, process flows, flowcharts, decision trees, timelines, swimlanes, hub-and-spoke diagrams, quadrant matrices, carousels, PDFs from clean HTML. Her canonical skill is <code>SOP-007</code> (build an infographic): structure-first content design via HTML/CSS/SVG, render to PNG/PDF via headless browser. Charta reads from <code>GL-003</code> (the design system) on every task — no ad-hoc palette choices, no random font picks. When a deliverable needs photographic or AI-generated finishing, Charta drafts the structure and hands off to Pixel.</td>
-</tr>
-<tr>
-<td width="140" align="center"><img src="github/team/pixel.png" width="120" alt="Pixel - Visual Specialist" /></td>
-<td><b>Pixel - Visual Specialist</b><br/><i>Every image is built one pixel at a time. Precision matters.</i><br/><br/>Pixel handles image stylization: thumbnails, social images, hero illustrations, quote cards, multi-reference composites. Her canonical skill is <code>SOP-008</code> (generate a styled image): five-part prompt construction, multi-reference handling, three capability paths (local image-gen / Mack-wired external API/MCP / fallback design-brief-for-human). Pixel reads from <code>GL-003</code> for palette, imagery direction, type roles, and voice. When the user's LLM lacks image generation, Pixel routes the connection half to Mack to wire up Gemini / OpenAI Images / Flux / any image-capable MCP, then drives the prompt once it's online.</td>
-</tr>
-<tr>
-<td width="140" align="center"><img src="github/team/iris.png" width="120" alt="Iris - Design System Architect" /></td>
-<td><b>Iris - Design System Architect</b><br/><i>A design system is a living contract. Every hardcoded color is a broken promise.</i><br/><br/>Iris is the brand and design-system specialist. She authors <code>GL-003</code> (the design system: identity, color palette, typography, spacing scale, imagery style, voice samples) through guided sessions with you, never pre-populated with "sensible defaults" you didn't pick. Her canonical skills are <code>SOP-009</code> (author the design system) and <code>SOP-010</code> (audit deliverables against it). The first time you ask for any creative work without GL-003 populated, Larry routes to Iris first to pin the values — once filled, every creative agent reads from here for consistent style.</td>
-</tr>
 </table>
 
 Each specialist has a contract at `Team/<Name> - <Role>/AGENTS.md`, and as of v1.10.0, a `journal/` folder for durable insights. Full routing table at `Team/agent-index.md`.
+
+> Need brand and visual work — design systems, infographics, stylized images? The **Designer Expansion Pack** adds three creative specialists (Iris, Charta, Pixel) to your team. It's an optional pack from the AI Library, not part of the base six.
 
 > The full Paperless Movement team - including the AI specialists you can add via the **AI Library** - is at [myicor.com](https://myicor.com).
 
@@ -177,7 +167,7 @@ The scaffold works on its own. The course is for people who want to understand w
 
 ## AI Library (membership)
 
-Once you've used myPKA for a while, you'll want more than nine specialists. The **AI Library** at [myicor.com](https://myicor.com) is the membership layer where you download **Expansions** — drop-in folders that grow your team. These Expansions are not in this repo and are not planned to be open-sourced:
+Once you've used myPKA for a while, you'll want more than six specialists. The **AI Library** at [myicor.com](https://myicor.com) is the membership layer where you download **Expansions** — drop-in folders that grow your team. These Expansions are not in this repo and are not planned to be open-sourced:
 
 - **Slack Expansion** so the team can read and act on conversations from your workspace.
 - **Obsidian optimizations** including templates, plugins, and views tuned to the scaffold.

@@ -8,7 +8,7 @@
 
 ## Pre-hired team
 
-**Larry, Nolan, Pax, Penn, Mack, Silas, Charta, Pixel, and Iris ship pre-hired with the scaffold.** SOP-001 governs hiring everyone beyond these nine. Do not re-run SOP-001 to "create" any of the nine — they already exist. SOP-001 is for the tenth hire onward.
+**Larry, Nolan, Pax, Penn, Mack, and Silas ship pre-hired with the scaffold.** SOP-001 governs hiring everyone beyond these six. Do not re-run SOP-001 to "create" any of the six — they already exist. SOP-001 is for the seventh hire onward.
 
 ## Purpose
 

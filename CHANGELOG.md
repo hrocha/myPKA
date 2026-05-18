@@ -2,6 +2,38 @@
 
 All notable changes to the myPKA scaffold are tracked here. Versions follow semver: MAJOR for breaking structural changes, MINOR for additions, PATCH for fixes.
 
+## [2.0.0] - 2026-05-18
+
+**Breaking structural change.** The base scaffold roster moves from **nine specialists to six**. The three creative specialists — Iris (Design System Architect), Charta (Infographic Designer), Pixel (Visual Specialist) — and everything they own come out of the base scaffold and into the optional **Designer Expansion Pack** from the AI Library. The base now ships Larry, Nolan, Pax, Penn, Mack, and Silas. A user updating an existing myPKA from 1.10.x to 2.0.0 loses the three creative agents from their base roster — install the Designer Expansion Pack to keep them. (COU-261)
+
+### Removed
+
+- **Three creative specialists.** `Team/Iris - Design System Architect/`, `Team/Charta - Infographic Designer/`, `Team/Pixel - Visual Specialist/` — agent folders, contracts, and per-agent `journal/` templates.
+- **Three Claude sub-agent boot files.** `.claude/agents/iris.md`, `.claude/agents/charta.md`, `.claude/agents/pixel.md`.
+- **Four design SOPs.** `SOP-007-build-an-infographic`, `SOP-008-generate-a-styled-image`, `SOP-009-author-a-design-system`, `SOP-010-audit-content-for-design-system-compliance`. The `SOP-007`–`SOP-010` slots are now vacated and reserved; per the no-renumber rule the gap is intentional. A fresh Designer Pack install claims the lowest free slots starting at `SOP-003`.
+- **`GL-003-design-system`.** The design-system Guideline (the visual identity SSOT) moves into the Designer Expansion Pack, which now ships it via `adds_guidelines`. It is no longer part of the base Guidelines set.
+- **Three team-portrait images.** `github/team/iris.png`, `github/team/charta.png`, `github/team/pixel.png`.
+
+### Changed
+
+- `Team/agent-index.md` — routing table down to six rows; "nine specialists" → "six specialists"; Mack's row drops the Pixel-handoff parenthetical.
+- `Team/Larry - Orchestrator/AGENTS.md` — routing cheatsheet drops the four design rows; "What Larry does not do" drops the two design/GL-003 lines.
+- `AGENTS.md` (root) — "The team (9 specialists)" → "The team (6 specialists)"; team table down to six rows; "the current 9 specialists" → "6".
+- `README.md` — "nine"/"9" roster references → "six"/"6" (×5 including version badge); three creative team-card blocks removed; added a Designer Pack pointer note.
+- `WAY-FORWARD.md` — roster lines and the "When … specialists isn't enough" section updated to six; capability list drops infographic layout, image stylization, and design-system authoring (now pack capabilities).
+- `Team Knowledge/SOPs/INDEX.md` — four design-SOP rows removed; Reserved line extended to "SOP-003 onward".
+- `Team Knowledge/Guidelines/INDEX.md` — `GL-003` row removed; replaced with a Reserved note pointing at the Designer Pack.
+- `validation-script.sh` — structural version check moved from the `1.10.x` line to the `2.0.x` line.
+
+### Migration
+
+Updating from 1.10.x to 2.0.0 is **breaking** — the base roster shrinks by three. If you do brand or visual work, install the **Designer Expansion Pack** (Iris, Charta, Pixel + the four design SOPs + `GL-003-design-system`) from the AI Library; it restores the full creative capability as an opt-in pack. Users who do only PKM, journaling, research, automation, or database work need no action — the six-specialist base covers them. Existing session logs that reference the removed agents or SOP-007–010 are left untouched as historical record.
+
+### Version files
+
+- `VERSION` → `2.0.0`
+- `.scaffold-version` → `2.0.0`
+
 ## [1.10.2] - 2026-05-15
 
 Restores the seeded sample content the myICOR myPKA course walks through. v1.10.x shipped the `PKM/My Life/`, `PKM/CRM/`, `PKM/Documents/`, `PKM/Journal/`, and `PKM/Images/` folders empty (`.gitkeep` placeholders), but the course curriculum references concrete files inside them by name — `morning-build-session.md`, `ship-mvp-by-q3.md`, and others. Learners following along found the files missing and assumed the download was broken. This release closes that gap. No folder structure, schema, or SOP changes — content only, so v1.10.x validation is unaffected.

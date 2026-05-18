@@ -8,13 +8,13 @@ ICOR, Paperless Movement are registered trademarks. See NOTICE.md
 
 You have the scaffold. Here's how it grows with you when you're ready.
 
-This file exists because the README answers *what* and *how*. It doesn't answer *why this folder and not that one*, *how do I extend it without breaking the model*, or *what happens when nine specialists isn't enough*. Those answers live elsewhere. This page is the map.
+This file exists because the README answers *what* and *how*. It doesn't answer *why this folder and not that one*, *how do I extend it without breaking the model*, or *what happens when six specialists isn't enough*. Those answers live elsewhere. This page is the map.
 
 ## You're here: the scaffold
 
 What this repo gives you, plainly:
 
-- A nine-person AI team (Larry, Penn, Pax, Nolan, Mack, Silas, Charta, Pixel, Iris) that runs in any LLM you already use.
+- A six-person AI team (Larry, Penn, Pax, Nolan, Mack, Silas) that runs in any LLM you already use.
 - A working file structure for **My Life** (Goals, Habits, Topics, Projects, Key Elements) plus `Documents/`, `CRM/`, `Images/`, `Journal/`.
 - The agent contracts (`AGENTS.md` per specialist), the routing index, and a starter set of SOPs and Workstreams.
 - A 34-minute walkthrough video where Dr. Thomas Rödl builds the system from scratch.
@@ -37,16 +37,16 @@ The **myPKA System workshop** at [myicor.com](https://myicor.com) is where those
 
 - The **My Life** concept in full: what each of the five categories is for, what belongs in each, and what the boundary cases look like in practice.
 - The per-folder rationale across `PKM/`, `Team/`, `Team Knowledge/`, `Team Inbox/`, and `Deliverables/`. Why each folder exists, what breaks if you remove it, and how to extend it without breaking the model.
-- How Larry, Penn, Pax, Nolan, Mack, Silas, Charta, Pixel, and Iris are designed as a team rather than as nine prompts. The contracts, the routing logic, the librarian role.
+- How Larry, Penn, Pax, Nolan, Mack, and Silas are designed as a team rather than as six prompts. The contracts, the routing logic, the librarian role.
 - How to teach the system to a partner, a teammate, or your future self.
 
 This is for anyone who wants to use the scaffold beyond the first month, extend it without diluting it, or teach it to someone else.
 
 Workshop details and pricing: [myicor.com](https://myicor.com)
 
-## When nine specialists isn't enough: myICOR membership and the AI Library
+## When six specialists isn't enough: myICOR membership and the AI Library
 
-Most people hit this wall around month three. The nine shipped specialists handle the core knowledge work — capture, research, hiring, automation, database integrity, infographic layout, image stylization, and design-system authoring. They don't handle bookkeeping, frontend development, marketing, or customer support. You start wanting to hire.
+Most people hit this wall around month three. The six shipped specialists handle the core knowledge work — capture, research, hiring, automation, and database integrity. They don't handle design work, bookkeeping, frontend development, marketing, or customer support. You start wanting to hire — or to add an Expansion pack like the Designer Pack (Iris, Charta, Pixel) for brand and visual work.
 
 **myICOR membership** at [myicor.com](https://myicor.com) is the layer where the team grows. Membership includes:
 
@@ -56,7 +56,7 @@ Most people hit this wall around month three. The nine shipped specialists handl
 - **Obsidian optimizations**: templates, plugins, and views tuned to the scaffold.
 - **Office hours** with the team that builds this scaffold and the operators running it day to day.
 
-Membership is for people running serious work on top of the scaffold and outgrowing what nine specialists can do.
+Membership is for people running serious work on top of the scaffold and outgrowing what six specialists can do.
 
 ## When your team or company needs the same thing: ICOR for Business
 

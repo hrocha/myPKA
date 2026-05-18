@@ -10,12 +10,8 @@ Filename pattern: `SOP-NNN-<title>.md`. See [[GL-001-file-naming-conventions]] f
 |---|---|---|---|
 | SOP-001 | [[SOP-001-how-to-add-a-new-specialist]] | Nolan | Step-by-step procedure to draft and onboard a new team specialist. References [[GL-001-file-naming-conventions]]. |
 | SOP-002 | [[SOP-002-convert-mypka-to-sqlite]] | Silas (run by the user via paste-into-LLM prompt) | Generate a SQLite mirror of your myPKA on demand. Markdown stays canonical; SQLite is a derived performance layer. Body is a paste-into-LLM prompt. |
-| SOP-007 | [[SOP-007-build-an-infographic]] | Charta | Structure-first content design via HTML/CSS/SVG, render to PNG/PDF via headless browser. Includes layout-shape decision tree, density rules, and the two-layer (HTML+SVG) diagram architecture. Reads from [[GL-003-design-system]]. |
-| SOP-008 | [[SOP-008-generate-a-styled-image]] | Pixel | Multi-reference image generation with three capability paths: local image-gen, Mack-wired external API/MCP, fallback design-brief-for-human. Five-part prompt construction, visual quality scoring, variant strategy. Reads from [[GL-003-design-system]]. |
-| SOP-009 | [[SOP-009-author-a-design-system]] | Iris | Guided session walking the user through populating [[GL-003-design-system]]: identity, color palette, typography, spacing scale, imagery style, voice samples. Decision-led, not prescriptive — the user picks; Iris asks. |
-| SOP-010 | [[SOP-010-audit-content-for-design-system-compliance]] | Iris | Verify visual deliverables against [[GL-003-design-system]]. Per-deliverable audit checklist, severity classification, report format. Audits surface violations; the user decides what to fix. |
 
-*Reserved (genuinely open for future agents):* SOP-003, SOP-004, SOP-005, SOP-006. Do not back-fill these slots without coordinating across the team.
+*Reserved (genuinely open for future agents):* SOP-003 onward (SOP-003, SOP-004, SOP-005, SOP-006, SOP-007, SOP-008, SOP-009, SOP-010). Do not back-fill these slots without coordinating across the team. SOP-007–010 were vacated when the design SOPs moved into the Designer Expansion Pack — a fresh pack install claims the lowest free slots starting at SOP-003.
 
 ## How to add a new SOP
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# validation-script.sh — verify a folder is myPKA scaffold v1.10.x-compliant.
+# validation-script.sh — verify a folder is myPKA scaffold v2.0.x-compliant.
 #
 # Usage:
 #   bash validation-script.sh <scaffold-root>
@@ -43,11 +43,12 @@ pass() {
 }
 
 # ----------------------------------------------------------------------------
-# 1. .scaffold-version exists and is in the v1.10.x line
+# 1. .scaffold-version exists and is in the v2.0.x line
 # ----------------------------------------------------------------------------
-# v1.10.x patch releases (1.10.0, 1.10.1, ...) all share the same structural
-# requirements, so any 1.10.x value passes this check. Bump the regex when a
-# 1.11.x line introduces structural changes.
+# v2.0.x patch releases (2.0.0, 2.0.1, ...) all share the same structural
+# requirements, so any 2.0.x value passes this check. Bump the regex when a
+# later line introduces structural changes. v2.0.0 is the six-specialist base
+# (the design trio moved into the Designer Expansion Pack).
 
 VERSION_FILE="$ROOT/.scaffold-version"
 if [ ! -f "$VERSION_FILE" ]; then
@@ -55,11 +56,11 @@ if [ ! -f "$VERSION_FILE" ]; then
 else
   VERSION=$(head -n1 "$VERSION_FILE" | tr -d '[:space:]')
   case "$VERSION" in
-    1.10.*)
-      pass ".scaffold-version is $VERSION (v1.10.x line)"
+    2.0.*)
+      pass ".scaffold-version is $VERSION (v2.0.x line)"
       ;;
     *)
-      fail ".scaffold-version is '$VERSION', expected '1.10.x'"
+      fail ".scaffold-version is '$VERSION', expected '2.0.x'"
       ;;
   esac
 fi

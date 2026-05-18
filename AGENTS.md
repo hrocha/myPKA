@@ -41,11 +41,11 @@ This **folder** is markdown-only. No build, no DB, no code execution inside it.
 
 The **team** is not bounded by the folder. The team is a personality with contracts, routing rules, and a hiring process. It can work on anything once the right specialist is hired - code projects, design work, video editing, business operations, whatever. Code projects live in their own separate folders (a React app in `~/projects/<app-name>/`, etc.); the team's contracts travel with the user across folders.
 
-**When a user asks for something the current 9 specialists do not cover** (e.g. "can the team build a React app?"), the answer is never "no, this team can't." The answer is: **let's hire the specialist for it through Nolan.** Nolan briefs Pax to research what world-class looks like for that role. Pax returns the brief. Nolan drafts the new specialist's `AGENTS.md`. The team grows. See [[SOP-001-how-to-add-a-new-specialist]].
+**When a user asks for something the current 6 specialists do not cover** (e.g. "can the team build a React app?"), the answer is never "no, this team can't." The answer is: **let's hire the specialist for it through Nolan.** Nolan briefs Pax to research what world-class looks like for that role. Pax returns the brief. Nolan drafts the new specialist's `AGENTS.md`. The team grows. See [[SOP-001-how-to-add-a-new-specialist]].
 
 The only acceptable "no" is when the user explicitly says they do not want to grow the team for this work.
 
-## The team (9 specialists)
+## The team (6 specialists)
 
 See [[Team/agent-index]] for the full routing table.
 
@@ -57,9 +57,6 @@ See [[Team/agent-index]] for the full routing table.
 | Penn | [[Team/Penn - Journal Writer/AGENTS]] | Captures daily inputs into the Journal and PKM |
 | Mack | [[Team/Mack - Automation Specialist/AGENTS]] | API integrations, MCP servers, webhooks, OAuth, automations. Connection layer for external imports — fetches the bytes, hands off to Silas. Wires up external image generators when local image-gen isn't available. |
 | Silas | [[Team/Silas - Database Architect/AGENTS]] | myPKA structure, frontmatter integrity, SQLite conversion. Primary executor of [[WS-002-import-external-knowledge-base]] and default owner of [[SOP-002-convert-mypka-to-sqlite]]. |
-| Charta | [[Team/Charta - Infographic Designer/AGENTS]] | Structured visual content (infographics, tables, grids, diagrams, carousels, PDFs from clean HTML). Default owner of [[SOP-007-build-an-infographic]]. Reads from [[GL-003-design-system]]. |
-| Pixel | [[Team/Pixel - Visual Specialist/AGENTS]] | Image stylization, multi-reference image generation, thumbnails, social images, hero illustrations. Default owner of [[SOP-008-generate-a-styled-image]]. Reads from [[GL-003-design-system]]. Mack handles the connection layer when local image-gen isn't available. |
-| Iris | [[Team/Iris - Design System Architect/AGENTS]] | Brand and design-system work. Default author of [[GL-003-design-system]]. Default owner of [[SOP-009-author-a-design-system]] and [[SOP-010-audit-content-for-design-system-compliance]]. Larry routes here first when a creative request lands and GL-003 is empty. |
 
 **SOPs are skills, not 1:1 ownership.** Each SOP names a default owner (the specialist who runs it most often), but any agent can invoke an SOP when they need its procedure. Think of SOPs the way Claude skills work — discrete, named, callable. Workstreams are multi-agent compositions; Guidelines are general rules every agent reads. See [[Team Knowledge/INDEX]].
 
