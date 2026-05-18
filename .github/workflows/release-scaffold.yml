@@ -190,7 +190,7 @@ jobs:
           echo "publish responded HTTP $HTTP:"; cat /tmp/fn.out; echo
           [ "$HTTP" = "200" ] || { echo "::error::Publish failed."; exit 1; }
 
-      - name: Create GitHub Release (attach ZIP + manifest)
+      - name: Create GitHub Release (attach versioned + stable ZIP + manifest)
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
@@ -200,18 +200,26 @@ jobs:
           ZIP_SHA: ${{ steps.build.outputs.zip_sha256 }}
         run: |
           set -euo pipefail
+          # Stable-named copy so `/releases/latest/download/mypka-scaffold-latest.zip`
+          # always resolves to the newest scaffold (COU-265). Identical bytes to the
+          # versioned asset — same sha256, just a fixed filename.
+          LATEST_ZIP="$(dirname "$ZIP")/mypka-scaffold-latest.zip"
+          cp "$ZIP" "$LATEST_ZIP"
           NOTES="Automated myPKA scaffold release v${VERSION} (AUTO-39 pipeline).
 
           - ZIP sha256: \`${ZIP_SHA}\`
           - Storage: \`ai-library-packs/scaffold/mypka-scaffold-v${VERSION}.zip\`
           - Per-file classifier manifest attached + in Storage as
             \`scaffold/mypka-scaffold-v${VERSION}-manifest.json\`.
+          - \`mypka-scaffold-latest.zip\` is a fixed-name copy of the versioned ZIP
+            (same bytes/sha256) so the stable
+            \`/releases/latest/download/mypka-scaffold-latest.zip\` URL resolves.
 
           See CHANGELOG.md for details."
-          gh release create "$TAG" "$ZIP" "$MANIFEST" \
+          gh release create "$TAG" "$ZIP" "$LATEST_ZIP" "$MANIFEST" \
             --title "myPKA scaffold v${VERSION}" \
             --notes "$NOTES" \
-            || gh release upload "$TAG" "$ZIP" "$MANIFEST" --clobber
+            || gh release upload "$TAG" "$ZIP" "$LATEST_ZIP" "$MANIFEST" --clobber
 
       - name: Summary
         run: |
@@ -220,5 +228,6 @@ jobs:
             echo "- ZIP sha256: \`${{ steps.build.outputs.zip_sha256 }}\`"
             echo "- manifest sha256: \`${{ steps.build.outputs.manifest_sha256 }}\`"
             echo "- Storage key: \`${{ steps.mint.outputs.zip_key }}\`"
+            echo "- Stable asset: \`mypka-scaffold-latest.zip\` (fixed-name copy)."
             echo "- CI held no service-role key (signed-upload-URL path)."
           } >> "$GITHUB_STEP_SUMMARY"
