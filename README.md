@@ -197,11 +197,11 @@ Membership-only is honest, not a gate. The scaffold here is genuinely complete. 
 
 ## Disclaimer
 
-The myPKA scaffold is a teaching artifact, not a production system. It is provided **as is**, without warranty of any kind, express or implied. The authors and copyright holders make no guarantees about fitness for a particular purpose, the behaviour of any LLM you point at the folder, the safety of any AI agent's reads or writes, or the integrity of your data over time.
+The myPKA scaffold is a teaching artifact and a starting point, not a production system. It is provided as is, without warranty of any kind, express or implied. We make no guarantees about fitness for a particular purpose, about how any LLM or AI agent will behave when pointed at this folder, or about the integrity of your data over time.
 
-You are responsible for your own backups, your own data hygiene, your own choice of LLM tools and what you allow them to access on your machine. We are not liable for data loss, business interruption, or any other damages arising from use of this scaffold or its examples. **Use at your own risk.**
+You are responsible for what you do with this scaffold. That includes your own backups, your own data hygiene, your choice of LLM and AI tooling, and what you allow those tools to read or write on your machine. We are not liable for data loss, downtime, broken setups, or any other damage arising from use of the scaffold or its examples. Use at your own risk.
 
-See [LICENSE](LICENSE) for the full disclaimer of warranties and limitation of liability.
+The binding legal terms are in the [LICENSE](LICENSE) (CC BY-NC-SA 4.0), which includes the full disclaimer of warranties and limitation of liability. This section is the plain-English version of what that license already says.
 
 ## Built by
 
