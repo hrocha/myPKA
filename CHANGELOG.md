@@ -2,6 +2,15 @@
 
 All notable changes to the myPKA scaffold are tracked here. Versions follow semver: MAJOR for breaking structural changes, MINOR for additions, PATCH for fixes.
 
+## [2.1.2] - 2026-05-20
+
+**Repository moved to myICOR org for corporate ownership; remains public and free.** The canonical home of the myPKA scaffold is now `https://github.com/myICOR/myPKA` (transferred from `TomSolid/myPKA`). The repo stays public under CC BY-NC-SA 4.0 and continues to be the free distribution channel; the myicor.com SaaS layer remains the paid product. Stars, forks, issues, and the old URL are preserved by GitHub's transfer redirects, so existing clones and bookmarks keep working. No code or content changes vs 2.1.0 — this release exists solely to publish the org-owned canonical artifact at `releases/latest/download/mypka-scaffold-latest.zip`. (AUTO-175)
+
+### Version files
+
+- `VERSION` → `2.1.2`
+- `.scaffold-version` → `2.1.2`
+
 ## [2.1.0] - 2026-05-19
 
 **Slash commands become adapter-generated.** The `/close-session` command is no longer pre-baked into the scaffold as a Claude-only file. The adapter now generates it at setup time from the canonical close-session protocol in `AGENTS.md`, so the scaffold ships host-neutral and every host gets the right thing: Claude Code gets the slash command, hosts without slash commands skip it and rely on the natural-language triggers. Additive, non-breaking — Claude Code users get the command regenerated idempotently on next activation. (COU-272)
