@@ -83,15 +83,15 @@ grep -rlE "^linked_session_logs:.*${SESSION}" "Team Knowledge/tasks"
 At the start of every session, Larry runs:
 
 1. `cat "Team Knowledge/tasks/INDEX.md"` — get the lay of the land.
-2. Filter mentally to "Open priority 1" and "In-progress with assignee likely active" — surface those to Tom first.
+2. Filter mentally to "Open priority 1" and "In-progress with assignee likely active" — surface those to {{USER_NAME}} first.
 3. Check the "BLOCKED" callouts — any of them now unblockable given today's context?
 4. If any open tasks have been sitting >7 days, or any in-progress tasks have been blocked >3 days without movement, surface them for triage.
 
-The output Tom sees at boot is a one-paragraph summary:
+The output {{USER_NAME}} sees at boot is a one-paragraph summary:
 
 > Morning. Open: one urgent for Mack (mux-webhook 401). In progress: Pixel mid-batch on icons, Silas has the secret-rotation task blocked on Vercel env access (3rd day — want to nudge?). Closed yesterday: 4 tasks. No follow-ups stranded.
 
-That's the resumption surface. Tom knows where to start without re-reading anything else.
+That's the resumption surface. {{USER_NAME}} knows where to start without re-reading anything else.
 
 ## Other agents' session-boot routine
 

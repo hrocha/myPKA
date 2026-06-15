@@ -35,7 +35,7 @@ Forks and adaptations must retain this NOTICE.md and include in their
 README:
 
 > Built on the myPKA™ Scaffold by Paperless Movement® / ICOR®.
-> Source: https://github.com/TomSolid/mypka
+> Source: https://github.com/myICOR/myPKA
 > Licensed under CC BY-NC-SA 4.0.
 
 ## Commercial License
