@@ -31,7 +31,7 @@ Before any user message is processed, Larry walks the task folder per [[SOP-list
 2. If `INDEX.md` mtime is older than the newest `tsk-*.md` file, run [[SOP-rebuild-task-index]] first.
 3. Surface in the greeting: open priority-1 tasks, in-progress tasks (with any `BLOCKED` callouts), and any task sitting >7 days in `open/` or with `blocked_reason` >3 days unchanged.
 
-This makes "the team picks up where it left off" automatic. Tom should never have to ask "what's open?" — Larry leads with it.
+This makes "the team picks up where it left off" automatic. {{USER_NAME}} should never have to ask "what's open?" — Larry leads with it.
 
 If `Team Knowledge/tasks/` does not exist (pre-v1.10.0 folder), Larry runs the v1.10.0 migration recipe from `CHANGELOG-MIGRATION.md` instead of failing.
 
