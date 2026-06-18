@@ -2,6 +2,29 @@
 
 All notable changes to the myPKA scaffold are tracked here. Versions follow semver: MAJOR for breaking structural changes, MINOR for additions, PATCH for fixes.
 
+## [2.4.0] - 2026-06-18
+
+**Ships local version history out of the box.** First-time initialization now offers to switch on local git versioning — a plain-language "time machine" for the folder — so new downloads get a roll-back safety net from day one. The offer is opt-in but strongly recommended: the adapter asks the user once, explains in non-technical terms that the history stays entirely on their computer (nothing uploaded or shared unless they later deliberately choose to) and that it lets them undo changes and roll back if an edit ever breaks something, and on yes runs a local-only `git init` + initial commit. The shipped `.gitignore` is hardened so that "nothing is shared / safe rollback" is actually true — it now excludes secrets, the derived database mirror, dependencies, build artifacts, and logs while still tracking the keys-only `.env.example`. The `VERSION` / `.scaffold-version` mismatch left by the 2.3.0 release is reconciled.
+
+### Added
+
+- **ADAPTER-PROMPT new step 5 "Offer local version history."** Inserted immediately after personalization (step 4) and before the tool-pointer-file step, so the first commit captures a clean, personalized baseline and everything after it is versioned. The adapter asks the user exactly once, in plain language, framing git as a local time machine / version history; covers (a) it stays entirely on the user's machine, nothing uploaded or shared unless they later deliberately choose to, (b) it lets them undo changes and roll back to any earlier state if an edit breaks something, (c) it is strongly recommended from the very start. Opt-in but recommended-yes; declining is fine and re-offer on a later activation is allowed. On yes: verify git is available, confirm the protective `.gitignore` is in place **before** committing, then `git init` → `git add -A` → `git commit -m "chore: initialize myPKA version history"`, with **no remote and no push** (local only). Idempotent: if a `.git` folder already exists, skip init and note it. Host-agnostic (plain shell `git`); hosts that cannot run shell commands hand the user the exact commands to paste. Includes a safety note that any later off-machine backup/sync must be a deliberate, reviewed choice using a **private** repo because the folder holds personal data.
+- **`VERSION HISTORY:` report-back field** in ADAPTER-PROMPT — the adapter now reports the outcome of the version-history offer as `initialized` | `declined` | `already a git repo`.
+
+### Changed
+
+- **`.gitignore` hardened.** Previously OS/editor cruft only (`.DS_Store`, `__MACOSX/`, `*.swp`, Obsidian workspace/cache). Now also excludes: `.env` / `.env.*` at any depth (e.g. installed-Expansion secrets at `Expansions/<slug>/.env`) with a negation that keeps the keys-only `.env.example` template tracked; local MCP server configs that may embed credentials (`.mcp.json`, `**/.mcp.json`, `.cursor/mcp.json`); private keys/certs (`*.key`, `*.pem`, `id_rsa`); the derived SQLite mirror and sidecars (`*.db`, `*.db-wal`, `*.db-shm`, `*.sqlite`, `*.sqlite3`); dependencies and build artifacts (`node_modules/`, `dist/`, `build/`, `.next/`, `.cache/`, `*.tsbuildinfo`); and logs/runtime state (`*.log`, `logs/`, `tmp/`, `*.pid`). This is the safety dependency for the version-history offer: the user-facing "nothing is shared / safe rollback" claim is only true if the very first commit cannot capture secrets or runtime state.
+- **ADAPTER-PROMPT step renumbering.** Former steps 5–9 become 6–10; the slash-command sub-step heading `### 7-bis` becomes `### 8-bis`; the "skip to step 5" personalization cross-reference and the step-10 roster-confirmation line are updated accordingly.
+
+### Migration
+
+Existing vaults need no action. Local version history is opt-in and can be turned on at any time — re-run the adapter prompt (it will offer it), or run it yourself from the folder root with the shipped `.gitignore` already in place: `git init` → `git add -A` → `git commit -m "chore: initialize myPKA version history"` (local only — do not add a remote or push). Vaults that are already git repos are detected and left untouched. If you upgrade an existing clone, refresh your local `.gitignore` from this release so the hardened exclusions apply before your next commit.
+
+### Version files
+
+- `VERSION` → `2.4.0` (was `2.3.0`)
+- `.scaffold-version` → `2.4.0` (reconciliation: the 2.3.0 release bumped `VERSION` to `2.3.0` but left `.scaffold-version` at `2.2.0`; both are now realigned at `2.4.0`)
+
 ## [2.3.0] - 2026-06-03
 
 **Aligns the "My Life" doctrine with the canonical ICOR / "PKM like a Pro" model.** The scaffold previously framed My Life as five peer buckets (Topics, Habits, Goals, Projects, Key Elements). It is now corrected to **four buckets — Key Elements, Projects, Habits, Topics — plus Goals as the operating layer**, with the relational laws the framework actually runs on made explicit and the schema updated to encode them. Adds the canonical teaching examples (a "lose 20 kg → Health" Goal carried by a Project or Habit; a "French" Topic that graduates into a Key Element) so any LLM reading the scaffold grasps the rules. Additive to the schema; one rule (Goal anchor) becomes required — see Migration.

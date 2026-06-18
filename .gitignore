@@ -1,5 +1,46 @@
+# --- OS / editor cruft ---
 .DS_Store
 __MACOSX/
 *.swp
 .obsidian/workspace*
 .obsidian/cache
+
+# --- Secrets (NEVER commit) ---
+# Excludes .env at any depth (e.g. Expansions/<slug>/.env). Keys-only
+# templates are kept tracked via the negation below.
+.env
+.env.*
+**/.env
+**/.env.*
+# ...but always ship the keys-only example template:
+!.env.example
+!**/.env.example
+# Local MCP server configs may embed credentials — never commit:
+.mcp.json
+**/.mcp.json
+.cursor/mcp.json
+# Private keys / certs:
+*.key
+*.pem
+id_rsa
+
+# --- Derived database mirror & SQLite sidecars ---
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# --- Dependencies & build artifacts ---
+node_modules/
+dist/
+build/
+.next/
+.cache/
+*.tsbuildinfo
+
+# --- Logs & runtime state ---
+*.log
+logs/
+tmp/
+*.pid

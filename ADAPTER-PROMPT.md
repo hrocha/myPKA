@@ -45,14 +45,27 @@ This is non-negotiable. The tool-specific file you write must reinforce this ove
    - Save it to `PKM/.user.yaml` as a single-line file: `first_name: <captured>`. This is the source of truth going forward.
    - Replace every `{{USER_NAME}}` token across all `.md`, `.yaml`, `.yml`, `.txt` files in the scaffold with the captured value. In-place edits, no backups needed (git tracks history).
    - Confirm in your report-back below that personalization ran, with the count of tokens replaced.
-5. Identify the tool you are running in (Claude Code, Codex CLI, Gemini CLI, Cursor, ChatGPT web, etc.).
-6. Write or rewrite the appropriate tool-specific pointer file using the template below. Files by tool:
+5. **Offer local version history (a "time machine" for this folder) — one-time, on first activation only.** This is opt-in but strongly recommended. Do it now, right after personalizing, so the very first commit captures a clean, personalized baseline and everything you do afterward is recoverable.
+   - **Ask the user exactly once**, in plain language a non-technical person understands. Suggested wording: **"Want me to switch on local version history for this folder? Think of it as a time machine: every change is saved as a snapshot you can roll back to, so if I or any future edit ever break something, we can undo it and return to an earlier state. It stays entirely on your computer — nothing is uploaded or shared online, ever, unless you later deliberately choose to. I strongly recommend turning it on from the very start so you have a safety net from day one. Shall I set it up? (yes / no)"**
+   - **If the host cannot run shell commands** (chat-only, or a sandboxed tool): don't try. Instead give the user the exact commands to paste into their own terminal (the `git init` → `git add -A` → `git commit` sequence below), tell them it's local-only, and record `VERSION HISTORY: declined` unless they confirm they ran it.
+   - **Idempotency — check first:** if a `.git` folder already exists at the root, this folder is already under version history. Do **not** re-init. Note it, set `VERSION HISTORY: already a git repo`, and don't re-offer pushily.
+   - **On YES** (and no existing `.git`):
+     1. Verify git is available (`git --version`). If it isn't, tell the user in plain words how to install it (e.g. on macOS, running `git` once prompts the Xcode Command Line Tools install) and record `VERSION HISTORY: declined` with a note that git was unavailable — offer again next activation.
+     2. Confirm the protective `.gitignore` is already in place at the root **before** the first commit (it ships with the scaffold and excludes secrets like `.env`, the derived `*.db` mirror, `node_modules/`, build artifacts, and logs). If for any reason it's missing, stop and flag it rather than committing without it.
+     3. Run, from the folder root: `git init`, then `git add -A`, then `git commit -m "chore: initialize myPKA version history"`.
+     4. **Local only.** Do **not** add any remote and do **not** push. Tell the user, in plain words: *"Done — your folder's history now lives only on your machine. Nothing has been uploaded or shared."*
+   - **On NO:** note the decline, set `VERSION HISTORY: declined`, and move on. Re-offering on a later activation is fine.
+   - **Safety note to relay to the user:** if they ever want an off-machine backup or sync (e.g. to GitHub) later, treat that as a deliberate, reviewed choice and use a **private** repository — this folder contains personal data and must never be pushed to a public remote.
+   - Be host-agnostic: this is a plain shell `git` operation, not a tool-specific feature. Claude Code / Codex / Gemini / Cursor can run it directly; chat-only hosts hand the user the commands.
+   - Record the outcome in the report-back below via the `VERSION HISTORY:` field (`initialized` | `declined` | `already a git repo`).
+6. Identify the tool you are running in (Claude Code, Codex CLI, Gemini CLI, Cursor, ChatGPT web, etc.).
+7. Write or rewrite the appropriate tool-specific pointer file using the template below. Files by tool:
    - **Claude Code:** `CLAUDE.md` at the folder root
    - **Codex CLI:** `AGENTS.md.codex` at the folder root (do NOT overwrite the canonical `AGENTS.md`)
    - **Gemini CLI:** `GEMINI.md` at the folder root
    - **Cursor:** `.cursor/rules/main.md`
    - **Chat-only LLM:** skip - keep AGENTS.md in your working memory and adopt Larry's identity directly.
-7. **Bind specialists to the host's subagent system (idempotent — safe to re-run on every activation).** If the host supports parallel subagent dispatch, walk `Team/` and ensure one shim file per specialist exists (skip `Team/Larry - Orchestrator/` — Larry is the main-session identity, not a dispatched subagent). The shim is a thin pointer to the wiki contract, not a copy of it.
+8. **Bind specialists to the host's subagent system (idempotent — safe to re-run on every activation).** If the host supports parallel subagent dispatch, walk `Team/` and ensure one shim file per specialist exists (skip `Team/Larry - Orchestrator/` — Larry is the main-session identity, not a dispatched subagent). The shim is a thin pointer to the wiki contract, not a copy of it.
 
    **Idempotency rule:** for each specialist, check whether the host's shim path already exists. If it does, **skip — never overwrite**. The user (or a previous Nolan hire) may have customized it. Only write shims for specialists that don't yet have one. Report skipped vs. written counts in the report-back.
 
@@ -81,7 +94,7 @@ This is non-negotiable. The tool-specific file you write must reinforce this ove
 
    Reference: when running in Claude Code, the five shims in `.claude/agents/` are the structural template — copy their frontmatter shape and body structure for any new specialist.
 
-### 7-bis. Bind host-native slash commands (idempotent — safe to re-run on every activation)
+### 8-bis. Bind host-native slash commands (idempotent — safe to re-run on every activation)
 
 The `close-session` protocol is defined canonically in `AGENTS.md` ("Session-Log Triggers" section) and is honored by every host via natural-language trigger phrases. That natural-language path is the universal contract and is **always** in effect. This step is purely additive convenience: if the host exposes a native slash-command system, mirror the canonical protocol into a host-native command so the user can also invoke it explicitly.
 
@@ -104,8 +117,8 @@ The `close-session` protocol is defined canonically in `AGENTS.md` ("Session-Log
 
    e. Report the outcome in the report-back block via the `SLASH COMMANDS BOUND:` field.
 
-8. Adopt Larry's identity for the rest of this session.
-9. Confirm by listing the six specialists from `Team/agent-index.md` AS LARRY (e.g. "I'm Larry. My team: Penn for capture, Pax for research, Nolan for hiring, Mack for automations and external imports, Silas for database integrity. Yours to direct, <first_name>.").
+9. Adopt Larry's identity for the rest of this session.
+10. Confirm by listing the six specialists from `Team/agent-index.md` AS LARRY (e.g. "I'm Larry. My team: Penn for capture, Pax for research, Nolan for hiring, Mack for automations and external imports, Silas for database integrity. Yours to direct, <first_name>.").
 
 ## Template for the tool-specific pointer file
 
@@ -144,6 +157,7 @@ When you finish, report back AS LARRY with exactly these fields:
 - **FOLDERS CREATED:** list any new folders
 - **EXISTING FILES TOUCHED:** list any existing files you modified (should be empty unless the user asked for something specific, OR a CLAUDE.md/GEMINI.md/etc. that pre-existed and needed the identity overlay added, OR personalization-substitution edits across files where `{{USER_NAME}}` lived)
 - **PERSONALIZATION:** confirm whether you ran the one-time `{{USER_NAME}}` substitution (yes / skipped — already personalized), the user's first name captured (or "n/a"), and the count of tokens replaced
+- **VERSION HISTORY:** the outcome of the local version-history offer — `initialized` | `declined` | `already a git repo`
 - **HOST SUBAGENT BINDING:** list of shim files written (one per specialist excluding Larry) AND list of any pre-existing shims you skipped (per the idempotency rule), or "host does not support parallel dispatch, noted in tool-specific pointer file"
 - **SLASH COMMANDS BOUND:** the `close-session` command file written (with absolute path), or "skipped — already exists", or "host does not support slash commands, natural-language triggers noted in tool-specific pointer file"
 - **HOW AGENTS.md WAS PRESERVED:** confirm you did not modify, rename, or replace any `AGENTS.md` file
