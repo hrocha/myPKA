@@ -22,9 +22,13 @@ myPKA is a folder. You drop it on your machine, point your LLM at it, and you ha
 
 If you only want the lean base, or you already run an existing scaffold and want to add one capability at a time, the à-la-carte packs (Cockpit, App Developer, Designer) are still published separately. This download just bundles all of it.
 
-**Watch the full walkthrough on YouTube:**
+**Watch on YouTube** (newest first):
 
-[![myPKA on YouTube - Stop Renting Your Knowledge. Switch OFF AI Auto-Memory.](github/youtube/launch-thumbnail.png)](https://www.youtube.com/watch?v=4C2w8eIG48A&feature=youtu.be)
+[![My AI Team Now Has an Interface. All 12 Agents. Free.](github/youtube/launch-thumbnail.png)](https://www.youtube.com/watch?v=FwPlAQeJcXI)
+
+- **[My AI Team Now Has an Interface. All 12 Agents. Free.](https://www.youtube.com/watch?v=FwPlAQeJcXI)** — the 12-agent Cockpit launch
+- **[Claude just killed ALL Note-Taking, Planner, and Health Apps. Here is proof.](https://www.youtube.com/watch?v=5ZgvLBxDqyI)** — the Cockpit reveal
+- **[One Life. One Folder.](https://www.youtube.com/watch?v=51ZVWAjHurI)**
 
 > **Why this is different from other scaffolds.** Most folder structures are someone's preference dressed up as a system. myPKA is the working slice of **ICOR**, a methodology Paperless Movement S.L. and thousands of professionals world wide have been running their own business on for years. Every folder, every routing decision, every specialist contract maps to a piece of that framework. The structure is not arbitrary. The reasoning is teachable. Both matter when you scale past the first week.
 
@@ -120,7 +124,7 @@ Each specialist has a contract at `Team/<Name> - <Role>/AGENTS.md` and a `journa
 - **Charta - Infographic Designer.** Turns content into clean, on-brand infographics and renders deliverables to HTML/PDF.
 - **Pixel - Visual Specialist.** Generates styled images and avatars within the design system.
 
-> The full Paperless Movement team - including further AI specialists you can add via the **AI Library** - is at [myicor.com](https://myicor.com).
+> The full team - including further AI specialists you can add via the **AI Library** - is at [myicor.com](https://myicor.com).
 
 ## What lives where
 
@@ -178,7 +182,7 @@ myPKA is built on the **My Life** part of the **ICOR methodology**. ICOR is tool
 
 Watch the deep-dive walkthrough where Dr. Thomas Rödl builds the system from scratch and explains the reasoning behind each folder, each agent, and each routing rule:
 
-**[Watch the deep-dive on YouTube](https://www.youtube.com/watch?v=4C2w8eIG48A&feature=youtu.be)**
+**[Watch the deep-dive on YouTube](https://www.youtube.com/watch?v=FwPlAQeJcXI)**
 
 The full courses live at **[myicor.com](https://myicor.com)**. They cover:
 
