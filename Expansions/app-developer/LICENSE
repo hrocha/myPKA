@@ -1,0 +1,141 @@
+myPKA App Developer Pack — Content License
+Version 1.0 — 2026-06-21
+App Developer Pack v1.0.1
+
+Copyright (c) 2026 Paperless Movement S.L. (Madrid, Spain).
+
+This Expansion Pack (the "Pack") — its specialist contracts (Felix, Vex, Vera),
+its SOPs (SOP-003 / SOP-004 / SOP-005), its README, and all accompanying
+markdown text — is licensed under the Creative Commons
+Attribution-NonCommercial 4.0 International License (CC BY-NC 4.0), as adapted
+and supplemented by the additional terms below.
+
+To view a copy of the underlying license, visit:
+https://creativecommons.org/licenses/by-nc/4.0/
+
+================================================================================
+PLAIN-LANGUAGE SUMMARY (not the license — the binding terms are below)
+================================================================================
+
+You MAY:
+  - install this Pack into your personal myPKA folder on machines you own
+    or control;
+  - read, study, and run the specialist contracts and SOPs;
+  - MODIFY, ADAPT, AND CUSTOMIZE the Pack freely for your own personal,
+    non-commercial use — rename a specialist, rewrite an SOP, retune a
+    contract to fit how you work; and
+  - share your changes privately, at no charge, for non-commercial use,
+    keeping the attribution and notices intact.
+
+You MAY NOT:
+  - sell the Pack or any modified version of it, or charge any fee for it;
+  - sublicense, rent, lease, or transfer it for a fee;
+  - redistribute it — original or modified — as your own product, or as part
+    of, or in connection with, any commercial product or service; or
+  - remove or alter the copyright, attribution, or license notices.
+
+================================================================================
+LICENSE TERMS
+================================================================================
+
+1. GRANT OF RIGHTS
+
+   The licensor grants you a worldwide, royalty-free, non-exclusive license,
+   for non-commercial purposes only, to:
+
+   (a) use, run, and display the Pack;
+   (b) make copies of the Pack;
+   (c) read and study its contents;
+   (d) modify the Pack and create new works based on it ("adaptations"),
+       including with the assistance of your own large language model; and
+   (e) share the Pack and your adaptations with other people at no charge.
+
+2. NON-COMMERCIAL PURPOSES (the only permitted purposes)
+
+   A purpose is "non-commercial" if it is NOT primarily intended for or
+   directed toward commercial advantage or monetary compensation. Permitted
+   non-commercial purposes include, without limitation: personal use, study,
+   research, experimentation, and private projects; and sharing the Pack or
+   your adaptations with other people at no charge and not as part of any
+   commercial product or service.
+
+3. ATTRIBUTION AND NOTICES (condition of the license)
+
+   For any copy or adaptation of the Pack that you share, you must:
+
+   (a) retain this LICENSE file with the Pack;
+   (b) retain all copyright, attribution, and license notices;
+   (c) give appropriate credit to "the myPKA App Developer Pack by
+       Paperless Movement S.L.", provide a link to the CC BY-NC 4.0 license,
+       and indicate if you made changes; and
+   (d) not imply that Paperless Movement S.L. endorses you or your adaptation.
+
+   If you share an adaptation, you must mark clearly that it has been changed
+   from the original and that Paperless Movement S.L. is not responsible for
+   your changes.
+
+4. PROHIBITED USES
+
+   Without separate written permission from the licensor, you must NOT:
+
+   (a) sell the Pack or any adaptation, or charge any fee for it;
+   (b) sublicense, rent, lease, or otherwise transfer the Pack for a fee;
+   (c) redistribute the Pack or any adaptation as part of, or in connection
+       with, any commercial product or service; or
+   (d) offer the Pack or any adaptation to third parties as a paid product,
+       a hosted service, or a "software/content as a service" of any kind.
+
+   For any of these, you need a separate commercial license. Contact:
+   contact@myicor.com
+
+5. TRADEMARKS
+
+   This license covers the copyrightable expression (text, structure,
+   examples) only. The following marks are owned by Paperless Movement S.L.
+   and/or its affiliated holding entity and are NOT licensed under CC BY-NC:
+
+     - PAPERLESS MOVEMENT® — USPTO Reg. No. 6,689,873
+     - ICOR® — USPTO Reg. Nos. 6,607,819 and 6,608,200
+     - myICOR™, myPKA™ (common-law / EUTM pending)
+
+   You MAY use these marks descriptively (nominative fair use) to say your
+   work is based on the myPKA™ App Developer Pack. You MAY NOT use them as the
+   name, logo, or branding of an adaptation or competing product. See NOTICE.md
+   for trademark usage guidelines.
+
+6. SCOPE — NO RUNTIME, NO CONNECTORS
+
+   This Pack adds three specialist contracts and three SOPs to your team. It
+   ships no runtime, no connectors, no credentials, and no executable code.
+   Any external services these specialists may later be wired to (for example,
+   via Mack) are out of scope of this Pack: you are solely responsible for the
+   data you send to, and the work you produce with, those services, and you are
+   the data controller (GDPR Art. 4(7)) for that processing. Paperless Movement
+   S.L. is not the data controller for any deliverable produced using this Pack.
+
+7. DISCLAIMER OF WARRANTIES
+
+   THE PACK IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. THIS APPLIES TO ANY
+   USE OF THE PACK WITH ANY THIRD-PARTY LARGE LANGUAGE MODEL, AGENT, OR TOOL.
+
+8. LIMITATION OF LIABILITY
+
+   IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+   DAMAGES, DATA LOSS, BUSINESS INTERRUPTION, OR OTHER LIABILITY, WHETHER IN AN
+   ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN
+   CONNECTION WITH THE PACK OR THE USE OR OTHER DEALINGS IN THE PACK.
+
+   Nothing in this license excludes or limits liability that cannot lawfully be
+   excluded under applicable mandatory law (for example, liability for intent or
+   gross negligence, or for injury to life, body, or health under German law).
+   To that extent only, the statutory rules apply.
+
+9. SEVERABILITY
+
+   If any provision is held unenforceable, the remaining provisions remain in
+   full force, and the unenforceable provision is applied to the maximum extent
+   permitted by law.
+
+Contact: contact@myicor.com

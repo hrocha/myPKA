@@ -1,0 +1,44 @@
+name: App Developer Pack
+slug: app-developer
+version: 1.0.1
+description: Adds Felix (frontend), Vex (security), Vera (QA) to your team for building, auditing, and quality-gating apps.
+category: agents
+expansion_type: agent_pack
+requires_agents: [Larry, Nolan, Mack]
+license: CC-BY-NC-4.0
+author: myICOR
+homepage: https://myicor.com/library/app-developer
+
+adds_agents:
+  - { name: Felix, role: Frontend Developer, folder: "Felix - Frontend Developer" }
+  - { name: Vex,   role: Security Engineer,  folder: "Vex - Security Engineer" }
+  - { name: Vera,  role: QA Specialist,      folder: "Vera - QA Specialist" }
+
+adds_sops:
+  - { default_owner: Felix, file: SOP-felix-build-a-component.md }
+  - { default_owner: Vex,   file: SOP-vex-security-audit.md }
+  - { default_owner: Vera,  file: SOP-vera-quality-gate.md }
+
+adds_guidelines: []
+adds_workstreams: []
+adds_templates: []
+env_vars: []
+
+post_install_steps:
+  - "Larry will introduce the three new specialists in your next session."
+  - "If you have a design system, Vera will reference Team Knowledge/Guidelines/GL-003-design-system.md for visual QA."
+
+post_install_validation:
+  - { type: "file_exists", path: "Team/Felix - Frontend Developer/AGENTS.md" }
+  - { type: "file_exists", path: "Team/Vex - Security Engineer/AGENTS.md" }
+  - { type: "file_exists", path: "Team/Vera - QA Specialist/AGENTS.md" }
+
+uninstall:
+  method: rm-rf-folder
+  residual_paths:
+    - Team/Felix - Frontend Developer/
+    - Team/Vex - Security Engineer/
+    - Team/Vera - QA Specialist/
+    - Team Knowledge/SOPs/SOP-*-felix-build-a-component.md
+    - Team Knowledge/SOPs/SOP-*-vex-security-audit.md
+    - Team Knowledge/SOPs/SOP-*-vera-quality-gate.md

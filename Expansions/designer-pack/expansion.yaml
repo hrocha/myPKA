@@ -1,0 +1,48 @@
+name: Designer Expansion Pack
+slug: designer-pack
+version: 1.1.0
+description: Adds Iris (design system), Charta (infographics), Pixel (visual styling) to your team for brand-consistent creative work.
+category: agents
+expansion_type: agent_pack
+requires_agents: [Larry, Nolan, Mack]
+license: CC-BY-NC-4.0
+author: myICOR
+homepage: https://myicor.com/library/designer-pack
+
+adds_agents:
+  - { name: Iris,   role: Design System Architect, folder: "Iris - Design System Architect" }
+  - { name: Charta, role: Infographic Designer,     folder: "Charta - Infographic Designer" }
+  - { name: Pixel,  role: Visual Specialist,        folder: "Pixel - Visual Specialist" }
+
+adds_sops:
+  - { default_owner: Iris,   file: SOP-author-a-design-system.md }
+  - { default_owner: Iris,   file: SOP-audit-content-for-design-system-compliance.md }
+  - { default_owner: Charta, file: SOP-build-an-infographic.md }
+  - { default_owner: Pixel,  file: SOP-generate-a-styled-image.md }
+
+adds_guidelines:
+  - { slug: GL-003-design-system, file: GL-003-design-system.md }
+adds_workstreams: []
+adds_templates: []
+env_vars: []
+
+post_install_steps:
+  - "Larry will introduce the three new creative specialists in your next session."
+  - "On your first creative request, Iris will offer a 15-minute guided session to populate Team Knowledge/Guidelines/GL-003-design-system.md — the brand SSOT Charta and Pixel read from."
+  - "Pixel handles image generation. If your LLM cannot generate images natively, Pixel routes the connection half to Mack to wire up an external image API/MCP."
+
+post_install_validation:
+  - { type: "file_exists", path: "Team/Iris - Design System Architect/AGENTS.md" }
+  - { type: "file_exists", path: "Team/Charta - Infographic Designer/AGENTS.md" }
+  - { type: "file_exists", path: "Team/Pixel - Visual Specialist/AGENTS.md" }
+
+uninstall:
+  method: rm-rf-folder
+  residual_paths:
+    - Team/Iris - Design System Architect/
+    - Team/Charta - Infographic Designer/
+    - Team/Pixel - Visual Specialist/
+    - Team Knowledge/SOPs/SOP-*-author-a-design-system.md
+    - Team Knowledge/SOPs/SOP-*-audit-content-for-design-system-compliance.md
+    - Team Knowledge/SOPs/SOP-*-build-an-infographic.md
+    - Team Knowledge/SOPs/SOP-*-generate-a-styled-image.md

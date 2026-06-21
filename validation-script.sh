@@ -43,14 +43,17 @@ pass() {
 }
 
 # ----------------------------------------------------------------------------
-# 1. .scaffold-version exists and is in the v2.x line
+# 1. .scaffold-version exists and is in the v2.x or v3.x line
 # ----------------------------------------------------------------------------
 # All v2.x releases (2.0.x, 2.1.x, ...) share the same structural requirements,
 # so any 2.x value passes this check. v2.0.0 is the six-specialist base (the
 # design trio moved into the Designer Expansion Pack); v2.1.0 added adapter-
-# generated host-native slash commands (no structural change). Bump the regex
-# to a tighter line only when a release introduces structural changes that
-# this script must enforce.
+# generated host-native slash commands (no structural change). v3.0.0 is the
+# all-in-one bundle — base 2.4.0 + Cockpit + App Developer Pack + Designer Pack
+# preinstalled (12 specialists, SOP-003..009, GL-003 filled); it is a strict
+# structural superset of v2.x (same required dirs, more agents/SOPs/guidelines),
+# so it passes the same checks. Bump the regex to a tighter line only when a
+# release introduces structural changes that this script must enforce.
 
 VERSION_FILE="$ROOT/.scaffold-version"
 if [ ! -f "$VERSION_FILE" ]; then
@@ -61,8 +64,11 @@ else
     2.*)
       pass ".scaffold-version is $VERSION (v2.x line)"
       ;;
+    3.*)
+      pass ".scaffold-version is $VERSION (v3.x all-in-one line)"
+      ;;
     *)
-      fail ".scaffold-version is '$VERSION', expected '2.x'"
+      fail ".scaffold-version is '$VERSION', expected '2.x' or '3.x'"
       ;;
   esac
 fi

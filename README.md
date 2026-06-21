@@ -1,7 +1,7 @@
 <!--
-myPKA Scaffold - © 2026 Paperless Movement S.L.
+myPKA Scaffold - © 2026 Paperless Movement®, S.L.
 Licensed under CC BY-NC-SA 4.0 - see LICENSE
-ICOR, Paperless Movement are registered trademarks. See NOTICE.md
+ICOR® and Paperless Movement® are registered trademarks. See NOTICE.md
 -->
 
 # myPKA
@@ -9,10 +9,18 @@ ICOR, Paperless Movement are registered trademarks. See NOTICE.md
 **An AI powered Personal Knowledge Assistance system, based on our business-proven ICOR methodology. Plain markdown. Any LLM. Yours forever.**
 
 [![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC_BY--NC--SA_4.0-lightgrey.svg)](LICENSE)
-![Version](https://img.shields.io/badge/version-2.1.0-blue)
+![Version](https://img.shields.io/badge/version-3.0.0-blue)
 ![Built on ICOR](https://img.shields.io/badge/built%20on-ICOR-C99A57)
 
-myPKA is a folder. You drop it on your machine, point your LLM at it, and you have a six-person AI team that organizes your life end to end. **It works on its own.** No database to set up, no SaaS to log into, no vendor to lose your data to.
+myPKA is a folder. You drop it on your machine, point your LLM at it, and you have a **full 12-specialist AI team** that organizes your life end to end. **It works on its own.** No database to set up, no SaaS to log into, no vendor to lose your data to.
+
+**v3.0.0 is the all-in-one download** — the max-capability bundle, everything preinstalled, no install step:
+
+- The **full 12-specialist team** — the base six (**Larry, Nolan, Pax, Penn, Mack, Silas**) plus the preinstalled **App Developer Pack** (**Felix**, **Vex**, **Vera**) and **Designer Pack** (**Iris**, **Charta**, **Pixel**).
+- The **myPKA Cockpit** interface preinstalled — a local, navigable, wikilink-aware viewer over your whole scaffold. Runs on your machine, BYO-Claude-key, nothing leaves it.
+- Both agent packs preinstalled and merged into your team, with their SOPs and the design-system Guideline already in place.
+
+If you only want the lean base, or you already run an existing scaffold and want to add one capability at a time, the à-la-carte packs (Cockpit, App Developer, Designer) are still published separately. This download just bundles all of it.
 
 **Watch the full walkthrough on YouTube:**
 
@@ -20,26 +28,26 @@ myPKA is a folder. You drop it on your machine, point your LLM at it, and you ha
 
 > **Why this is different from other scaffolds.** Most folder structures are someone's preference dressed up as a system. myPKA is the working slice of **ICOR**, a methodology Paperless Movement S.L. and thousands of professionals world wide have been running their own business on for years. Every folder, every routing decision, every specialist contract maps to a piece of that framework. The structure is not arbitrary. The reasoning is teachable. Both matter when you scale past the first week.
 
-## What's new in v2.0.0
+## What's new in v3.0.0
 
-**This is a MAJOR, breaking release.** The base scaffold roster moves from **nine specialists to six**.
+**This is the all-in-one bundle — the max-capability download.** A single folder that ships the full base scaffold, the local **myPKA Cockpit** interface, and a **12-specialist team**, all preinstalled, with no install step.
 
-The three creative specialists — **Iris** (Design System Architect), **Charta** (Infographic Designer), and **Pixel** (Visual Specialist) — and everything they own (their contracts, their per-agent journals, four design SOPs, the `GL-003-design-system` Guideline, and their team-portrait images) come **out of the base scaffold**. They now ship as the optional **Designer Expansion Pack** from the AI Library.
+What's in the box:
 
-The base scaffold now ships exactly six specialists: **Larry, Nolan, Pax, Penn, Mack, and Silas.**
+- **The full 12-specialist team.** The base six (**Larry, Nolan, Pax, Penn, Mack, Silas**) plus the **App Developer Pack** (**Felix** — Frontend Developer, **Vex** — Security Engineer, **Vera** — QA Specialist) and the **Designer Pack** (**Iris** — Design System Architect, **Charta** — Infographic Designer, **Pixel** — Visual Specialist), already merged into `Team/`, with their SOPs and the `GL-003-design-system` Guideline in place.
+- **The myPKA Cockpit interface, preinstalled** at `Expansions/mypka-cockpit/`. A local, navigable, wikilink-aware viewer over your whole scaffold (reads the SQLite mirror read-only). It runs entirely on your machine, uses **your own Claude key**, and never sends your data anywhere. No auto-launch — you generate a one-click launcher and start it yourself.
+- **Both agent packs and the Cockpit preinstalled.** No download from the AI Library required for these three — they ship inside this bundle.
 
-- **Why the change.** The base scaffold is the working slice of ICOR everyone needs — PKM, journaling, research, hiring, automation, database work. Brand and visual work is real work, but it isn't universal. Pulling the creative trio into an opt-in pack keeps the base lean for the majority and gives design-focused users a clean, dedicated pack instead of carrying weight they may never use.
-- **What you get if you do design work.** Install the **Designer Expansion Pack** from the AI Library — it restores Iris, Charta, Pixel, the four design SOPs, and `GL-003-design-system` as a drop-in pack. Nothing is lost; the capability simply moves to opt-in.
-- **Why it's a MAJOR bump.** Removing specialists from the base roster is a breaking structural change under semver. An existing myPKA folder updated from 1.10.x to 2.0.0 will lose the three creative agents from its base roster unless the Designer Expansion Pack is installed. See **Migrating to v2.0.0** below.
+**Why it's a MAJOR bump.** The default download's team roster, SOP/Guideline set, and `Expansions/` contents all change shape. This is a new bundle SKU, not a forced migration — if you already run the lean base scaffold, you are unaffected, and you can still add capabilities one at a time via the à-la-carte packs. See **About this bundle vs. the à-la-carte packs** below.
 
-Everything else is unchanged — the task system, per-agent journals, and the LLM-readable migration changelog introduced earlier all carry forward. Plain markdown, any LLM, yours forever.
+Everything from the base scaffold carries forward — the task system, per-agent journals, the four-buckets-plus-Goals My Life doctrine, local version history, and the LLM-readable migration changelog. Plain markdown, any LLM, yours forever.
 
 ## Get going now
 
 1. Clone or download the repo into a folder you'll actually use.
 2. Open the folder in your LLM tool (Claude Code, Codex CLI, Gemini CLI, Cursor, or Obsidian + chat plugin).
-3. Paste the contents of `initialize yourself in this folder` as your first message.
-4. The LLM reads `ADAPTER-PROMPT.md`, writes a tool-specific pointer file (`CLAUDE.md`, `GEMINI.md`, etc.), and reports the team is online.
+3. As your first message, say: **"Read `ADAPTER-PROMPT.md` and follow it to set yourself up."** (This is the reliable bootstrap on every tool — and the fallback if a bare `/init` ever overwrites the shipped `CLAUDE.md` with a generic summary.)
+4. The LLM reads `ADAPTER-PROMPT.md`, personalizes the folder, writes a tool-specific pointer file (`CLAUDE.md`, `GEMINI.md`, etc.), **installs the bundled Expansions and builds the Cockpit dashboard so it's ready to launch**, and reports the team is online. It will ask once for your first name and one "proceed?" consent — everything runs and stays on your machine, nothing is uploaded. When it finishes, double-click the generated launcher in `Expansions/mypka-cockpit/` to open the Cockpit.
 5. Ask "Who are you?" and you'll see Larry is at your service.
 6. Ask "What's open?" and Larry walks the new `Team Knowledge/tasks/open/` folder for you.
 
@@ -72,7 +80,7 @@ If you've ever opened a blank Obsidian vault and didn't know where to put anythi
 
 ## Meet the team
 
-Six specialists ship pre-loaded. **You only ever talk to Larry.** Larry routes.
+**Twelve specialists ship pre-loaded** in this all-in-one bundle. **You only ever talk to Larry.** Larry routes. The base six are profiled below; the six from the preinstalled App Developer and Designer packs (Felix, Vex, Vera, Iris, Charta, Pixel) are summarized right after the table, with full contracts at `Team/<Name> - <Role>/AGENTS.md`.
 
 <table>
 <tr>
@@ -103,9 +111,16 @@ Six specialists ship pre-loaded. **You only ever talk to Larry.** Larry routes.
 
 Each specialist has a contract at `Team/<Name> - <Role>/AGENTS.md` and a `journal/` folder for durable insights. Full routing table at `Team/agent-index.md`.
 
-> Need brand and visual work — design systems, infographics, stylized images? The **Designer Expansion Pack** adds three creative specialists (Iris, Charta, Pixel) to your team. It's an optional pack from the AI Library, not part of the base six.
+**Also preinstalled in this bundle — the App Developer Pack and the Designer Pack:**
 
-> The full Paperless Movement team - including the AI specialists you can add via the **AI Library** - is at [myicor.com](https://myicor.com).
+- **Felix - Frontend Developer.** Builds UI components and frontends to spec; the hands behind the Cockpit's interface work.
+- **Vex - Security Engineer.** Threat-models, audits, and reviews anything that touches keys, MCP configs, or external code — including the security gate on installed Expansions.
+- **Vera - QA Specialist.** Designs and runs the quality gate; the green/red signal before anything ships.
+- **Iris - Design System Architect.** Owns the design system (`GL-003-design-system`) — tokens, components, and the rules everyone else designs against.
+- **Charta - Infographic Designer.** Turns content into clean, on-brand infographics and renders deliverables to HTML/PDF.
+- **Pixel - Visual Specialist.** Generates styled images and avatars within the design system.
+
+> The full Paperless Movement team - including further AI specialists you can add via the **AI Library** - is at [myicor.com](https://myicor.com).
 
 ## What lives where
 
@@ -130,15 +145,14 @@ Next session, Larry walks `tasks/open/` and `tasks/in-progress/` first, before d
 
 The journal sits next to this. When the assignee learns something durable while working a task — a build pattern that worked, an anti-pattern they want to remember, a rule of thumb — they write a short entry in their `journal/`. The next time a task references that entry, they re-read their own past thinking before starting. Learning compounds across sessions.
 
-## Migrating to v2.0.0
+## About this bundle vs. the à-la-carte packs
 
-v2.0.0 is a **breaking** upgrade — the base roster shrinks by three. This is the breaking step: updating from 1.10.x removes **Iris, Charta, and Pixel** (plus the four design SOPs and `GL-003-design-system`) from your base scaffold.
+v3.0.0 is a **new bundle SKU**, not a forced migration. Two distribution shapes coexist:
 
-- **If you do brand or visual work**, install the **Designer Expansion Pack** from the AI Library *before or right after* upgrading. It restores Iris, Charta, Pixel, the four design SOPs, and `GL-003-design-system` as an opt-in pack — full creative capability, nothing lost.
-- **If you do only PKM, journaling, research, hiring, automation, or database work**, no action is needed. The six-specialist base covers you.
-- **Existing session logs** that reference the removed agents or SOP-007–010 are left untouched as a historical record.
+- **This all-in-one bundle** (what you're looking at) ships the base scaffold, the myPKA Cockpit, the App Developer Pack, and the Designer Pack **all preinstalled** — 12 specialists, the Cockpit interface, and every pack SOP/Guideline in place on first clone. No install step. New users wanting the full capability should download this.
+- **The à-la-carte packs** (Cockpit, App Developer, Designer) remain published separately from the AI Library. If you already run the lean base scaffold and want to add **one** capability at a time, install just the pack you need via the normal [[WS-003-install-an-expansion]] flow. Adopters of the base scaffold are **unaffected** by this release — there is nothing to migrate.
 
-Open `CHANGELOG-MIGRATION.md` at the root and ask your LLM to run the recipe — it's numbered and idempotent, and you can audit each step before it runs. After the migration, run `bash validation-script.sh .` from the scaffold root — it exits 0 when the upgrade is structurally complete. See the `[2.0.0]` entry in [CHANGELOG.md](CHANGELOG.md) for the full list of what moved.
+After downloading, run `bash validation-script.sh .` from the scaffold root — it exits 0 when the structure is intact. See the `[3.0.0]` entry in [CHANGELOG.md](CHANGELOG.md) for the full bundle manifest.
 
 ## Principles
 
@@ -175,11 +189,11 @@ The scaffold works on its own. The course is for people who want to understand w
 
 ## AI Library (membership)
 
-Once you've used myPKA for a while, you'll want more than six specialists. The **AI Library** at [myicor.com](https://myicor.com) is the membership layer where you download **Expansions** — drop-in folders that grow your team. These Expansions are not in this repo and are not planned to be open-sourced:
+This bundle already ships the Cockpit, the App Developer Pack, and the Designer Pack preinstalled — but the **AI Library** at [myicor.com](https://myicor.com) is the membership layer where you download **more** Expansions: drop-in folders that grow your team beyond the twelve specialists here. These Expansions are not in this repo and are not planned to be open-sourced:
 
 - **Slack Expansion** so the team can read and act on conversations from your workspace.
 - **Obsidian optimizations** including templates, plugins, and views tuned to the scaffold.
-- **Agent packs** that drop into your `Expansions/` folder: an App Developer pack (Felix + Vex + Vera), a Marketing pack, a Customer Support pack, a Bookkeeping pack, and others.
+- **More agent packs** that drop into your `Expansions/` folder: a Marketing pack, a Customer Support pack, a Bookkeeping pack, and others. *(The App Developer and Designer packs are already preinstalled in this bundle.)*
 - **Connector Expansions** for the tools you already live in (Notion, Readwise, Linear, …).
 - **Office hours and walkthroughs** with the team that builds this scaffold.
 
@@ -187,11 +201,15 @@ Membership-only is honest, not a gate. The scaffold here is genuinely complete. 
 
 ## License and trademarks
 
-- **Content and code**: [CC BY-NC-SA 4.0](LICENSE). Free for personal and non-commercial use, with attribution and share-alike.
+> **Built on the myPKA™ Scaffold by Paperless Movement® / ICOR®.**
+> Source: https://github.com/myICOR/myPKA
+> Licensed under CC BY-NC-SA 4.0. See [`LICENSE`](LICENSE), [`NOTICE.md`](NOTICE.md), and [`LICENSE-MAP.md`](LICENSE-MAP.md).
+
+- **Content and code**: [CC BY-NC-SA 4.0](LICENSE). Free for personal and non-commercial use, with attribution and share-alike. Per-subtree license boundaries (base scaffold, Cockpit, and the Expansion Packs) are mapped in [`LICENSE-MAP.md`](LICENSE-MAP.md).
 - **Registered trademarks (US)**:
-  - PAPERLESS MOVEMENT - USPTO Reg. No. 6,689,873
-  - ICOR - USPTO Reg. Nos. 6,607,819 and 6,608,200
-- **Common-law marks**: myICOR, myPKA
+  - PAPERLESS MOVEMENT® - USPTO Reg. No. 6,689,873
+  - ICOR® - USPTO Reg. Nos. 6,607,819 and 6,608,200
+- **Common-law marks**: myICOR™, myPKA™
 - See [NOTICE.md](NOTICE.md) for trademark usage guidelines.
 - Commercial licensing: contact@myicor.com
 

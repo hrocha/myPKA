@@ -3,19 +3,22 @@
 # Event-driven snapshot sync — SENDER side (myPKA, the OSS source of truth).
 #
 # When the Expansions/ tree changes on `main`, this fires a repository_dispatch
-# event at github.com/TomSolid/myicor, which carries a bundled byte-identical
-# copy of Expansions/ at src/apps/courses/workshop/data/mypka-scaffold-snapshot/.
-# The receiving workflow (sync-mypka-snapshot.yml in myicor) checks myPKA out
-# at the exact SHA below, rsyncs, and opens a drift PR.
+# event at a downstream consumer repo (its owner/name is supplied at runtime via
+# the MYPKA_SOURCE_REPO secret — never hardcoded here), which carries a bundled
+# byte-identical copy of Expansions/. The receiving workflow on the consumer side
+# checks myPKA out at the exact SHA below, rsyncs, and opens a drift PR.
 #
-# This decouples myicor's snapshot freshness from myPKA's public release
+# This decouples the consumer's snapshot freshness from myPKA's public release
 # cadence — no manual double-edit, no waiting for a release tag.
 #
-# CREDENTIAL: needs repo secret MYPKA_SYNC_TOKEN — a fine-grained PAT (or
-# GitHub App token) with permission to trigger workflows / dispatch events on
-# TomSolid/myicor. Until that secret exists this workflow's dispatch step
-# fails fast and harmlessly (it changes nothing in either repo). See
-# docs/SOP-mypka-snapshot-sync.md in the myicor repo for the exact setup spec.
+# CREDENTIALS: needs two repo secrets —
+#   MYPKA_SYNC_TOKEN   a fine-grained PAT (or GitHub App token) with permission
+#                      to trigger workflows / dispatch events on the consumer repo.
+#   MYPKA_SOURCE_REPO  the consumer repo in owner/name form (kept secret so the
+#                      private destination is never disclosed in this public file).
+# Until both secrets exist this workflow's dispatch step fails fast and harmlessly
+# (it changes nothing in either repo). See the consumer repo's snapshot-sync setup
+# spec for the exact configuration.
 # ---------------------------------------------------------------------------
 name: Notify snapshot consumers
 
@@ -36,21 +39,28 @@ jobs:
   dispatch:
     runs-on: ubuntu-latest
     steps:
-      - name: Guard — credential present
+      - name: Guard — credentials present
         env:
           SYNC_TOKEN: ${{ secrets.MYPKA_SYNC_TOKEN }}
+          SOURCE_REPO: ${{ secrets.MYPKA_SOURCE_REPO }}
         run: |
           if [ -z "$SYNC_TOKEN" ]; then
             echo "::error::Repo secret MYPKA_SYNC_TOKEN is not set."
-            echo "::error::Add it before this workflow can dispatch to myicor."
-            echo "::error::Setup spec: myicor repo docs/SOP-mypka-snapshot-sync.md"
+            echo "::error::Add it before this workflow can dispatch to the consumer repo."
+            echo "::error::Setup spec: consumer repo snapshot-sync setup doc."
             exit 1
           fi
-          echo "MYPKA_SYNC_TOKEN present — proceeding."
+          if [ -z "$SOURCE_REPO" ]; then
+            echo "::error::Repo secret MYPKA_SOURCE_REPO is not set."
+            echo "::error::It must hold the consumer repo in owner/name form."
+            exit 1
+          fi
+          echo "Required secrets present — proceeding."
 
-      - name: Send repository_dispatch to TomSolid/myicor
+      - name: Send repository_dispatch to snapshot consumer
         env:
           SYNC_TOKEN: ${{ secrets.MYPKA_SYNC_TOKEN }}
+          SOURCE_REPO: ${{ secrets.MYPKA_SOURCE_REPO }}
           SOURCE_SHA: ${{ github.sha }}
           SOURCE_REF: ${{ github.ref_name }}
         run: |
@@ -61,13 +71,13 @@ jobs:
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer ${SYNC_TOKEN}" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
-            https://api.github.com/repos/TomSolid/myicor/dispatches \
+            "https://api.github.com/repos/${SOURCE_REPO}/dispatches" \
             -d "{\"event_type\":\"mypka-expansions-changed\",\"client_payload\":{\"source_sha\":\"${SOURCE_SHA}\",\"source_ref\":\"${SOURCE_REF}\"}}")
           echo "GitHub API responded HTTP ${http_code}"
           if [ "$http_code" != "204" ]; then
             echo "::error::Dispatch failed (expected HTTP 204). Response body:"
             cat /tmp/dispatch-resp.txt || true
-            echo "::error::Check MYPKA_SYNC_TOKEN scopes — needs contents:write on TomSolid/myicor."
+            echo "::error::Check MYPKA_SYNC_TOKEN scopes — needs contents:write on the consumer repo."
             exit 1
           fi
-          echo "Dispatch accepted. myicor sync-mypka-snapshot.yml will now run."
+          echo "Dispatch accepted. The consumer's snapshot-sync workflow will now run."

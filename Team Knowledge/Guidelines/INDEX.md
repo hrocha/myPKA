@@ -10,9 +10,10 @@ Filename pattern: `GL-NNN-<title>.md`.
 |---|---|---|
 | GL-001 | [[GL-001-file-naming-conventions]] | Kebab-case rules, ISO date prefix on date-driven files, slug rules, image filename pattern. |
 | GL-002 | [[GL-002-frontmatter-conventions]] | YAML frontmatter field schemas for all 8 entity types, typing rules, foreign-key convention. Aligns with [[SOP-002-convert-mypka-to-sqlite]]. |
+| GL-003 | [[GL-003-design-system]] | Design-system / visual-identity SSOT — color, type, spacing, voice tokens that Iris authors and Charta/Pixel/Vera read from. *(Designer Pack — preinstalled in v3.0.0)* |
 | GL-004 | [[GL-004-task-resource-linking]] | One-way Task → Resource linking rule, seven-array task frontmatter contract, `linked_deliverables` slug format, archive-on-close cascade. Read by [[SOP-create-task]], [[SOP-claim-task]], [[SOP-close-task]]. |
 
-*Reserved:* GL-003 — the design-system Guideline (the visual identity SSOT) ships with the Designer Expansion Pack, not the base scaffold. Installing the pack adds `GL-003-design-system.md` to this set.
+*Reserved:* none — GL-003 is now filled by the Designer Pack preinstalled in the v3.0.0 all-in-one bundle. Next free Guideline slot is GL-005.
 
 ## When to write a new Guideline
 

@@ -117,8 +117,81 @@ The `close-session` protocol is defined canonically in `AGENTS.md` ("Session-Log
 
    e. Report the outcome in the report-back block via the `SLASH COMMANDS BOUND:` field.
 
+### 8-ter. Install the bundled Expansions and build the Cockpit (MANDATORY on first activation — the scaffold is NOT "ready to use" until this runs)
+
+This all-in-one bundle ships with Expansions PRE-PLACED under `Expansions/`. Activation is not complete until each one is handled. **Do not assume any Expansion is "already installed."** Walk `Expansions/` and act on every subfolder that contains a valid `expansion.yaml`. This step OPERATIONALIZES the natural-language "Expansion Install Triggers" contract in `AGENTS.md` for the first-run case — it is consistent with that contract and with `WS-003-install-an-expansion`; it does not replace them. SSOT: where this step needs an Expansion's own procedure, it REFERENCES that Expansion's contract files by path and executes them — it never restates their steps here.
+
+#### 8-ter-a. The ONE upfront setup consent (the key UX fix — read before you prompt)
+
+There are two install paths, and they gate very differently. **Determine which path you are on before prompting:**
+
+- **Fresh all-in-one first-run path** (this is the common case for this bundle): `PKM/.user.yaml` did NOT exist when activation began (you are creating it in step 4), AND there is no pre-existing user data to protect. On this path the Cockpit's `INSTALL.md` consent + backup gates must NOT become seven separate stop-and-wait prompts — that is a terrible first-run experience. **Collapse them into ONE upfront setup consent**, asked once during activation, ideally folded together with the step-4 personalization ask and the step-5 version-history ask. Suggested wording:
+
+  > **"I'll personalize this folder, turn on local version history, and build + set up the Cockpit dashboard so it's ready to launch — everything runs and stays on your machine, nothing is uploaded. Proceed? (yes / no)"**
+
+  On YES, this single consent satisfies the Cockpit `INSTALL.md` **Step 0 (consent)** and **Step 1 (backup)** gates for the whole first-run, BECAUSE: the version-history git commit from step 5 IS the restorable backup baseline (`INSTALL.md` Step 1 explicitly accepts "the current commit they can reset to" as the backup). If the user declined version history in step 5, fall back to offering a one-shot timestamped backup (`zip -r ../mypka-backup-$(date +%Y%m%d-%H%M).zip .`) before any Cockpit write, OR record their explicit waiver — do not silently skip the backup gate.
+
+  **The same single consent also covers the FULL SQLite extension schema (the key 3.0 change).** On this fresh all-in-one first-run, do NOT detect-gaps-then-offer the SQLite upgrade as a separate prompt — install the **full extension schema by default** under this one consent (see 8-ter-c step 2 for the exact `--all` command). The reason is a UX one: every Cockpit dashboard module (Finance, Health, Workouts, Habit heatmap, Food log) has backing tables in the SQLite mirror, and if those tables are absent a module renders broken/missing instead of as a ready, empty state. Installing the full schema up front means all modules render ready out of the box. The tables are additive and non-destructive (an empty table is harmless), and the user can remove any module later. This `--all`-by-default behavior is specific to the ALL-IN-ONE bundle's fresh first-run — it is justified precisely because there is no pre-existing user data to protect.
+
+- **À-la-carte path into an ALREADY-POPULATED scaffold** (the user is installing the Cockpit later, into a myPKA that already holds real notes/journal/CRM data): the streamlining above does NOT apply, and neither does the `--all`-by-default SQLite behavior. Real user data is at stake. Follow the **full per-step gates** of `Expansions/mypka-cockpit/INSTALL.md` exactly as written — surface `DISCLAIMER.md` and stop for consent (Step 0), confirm a restorable backup (Step 1), and run `detect-gaps.py` then **OFFER** the SQLite upgrade per module (never auto-run, never force `--all` onto someone's existing data) (Step 4) as separate, deliberate decisions. When in doubt about which path you are on, treat it as this path and use the full gates.
+
+#### 8-ter-b. Detect build prerequisites (graceful — never hard-fail activation)
+
+The Cockpit build needs **Node.js v20+** and **Python 3 with PyYAML**. Detect them before building:
+
+```sh
+node --version          # need v20+
+python3 --version       # need Python 3.x (the runtime itself)
+python3 -m pip --version # is pip available for this Python?
+python3 -c "import yaml" # PyYAML present? (no output = present)
+```
+
+**The key distinction: separate AUTO-INSTALLABLE prereqs from SYSTEM-LEVEL ones.** PyYAML is a small pip-installable Python library — if Python 3 and pip are already present, you can install it yourself; the user should never have to. Node.js, a missing Python *runtime*, or a missing pip are genuine system installs you should NOT silently force.
+
+- **All present** (Node v20+, Python 3, PyYAML importable) → build the Cockpit by default under the single consent above.
+
+- **Only PyYAML missing, but Python 3 present AND pip available** → **auto-install it; do not punt to the user.** ASK once in plain language, then on YES install it yourself, verify, and **continue the build normally**:
+  1. Ask (you may fold this into / mention it alongside the single upfront setup consent in 8-ter-a — cleanest is to surface it there so there's no second stop): *"Building the Cockpit's dashboard needs PyYAML, a small Python helper library. Install it now? It runs `pip3 install --user pyyaml` and stays on your machine. (yes / no)"*
+  2. **On YES:** run `pip3 install --user pyyaml` (or `python3 -m pip install --user pyyaml`), then verify with `python3 -c "import yaml"` (no output = success). On success, proceed with the Cockpit build / SQLite setup exactly as in the "all present" case. Record `COCKPIT: built — PyYAML auto-installed on consent` in the report-back.
+  3. **Only if the user declines, OR the install/verify fails** → fall back to the graceful "built-pending" state below (treat PyYAML as the outstanding prereq with the `pip3 install --user pyyaml` remedy).
+
+- **Node.js missing or too old, OR Python 3 itself absent, OR pip unavailable** → do NOT hard-fail the whole activation and do NOT silently force a system install. Do everything else (personalize, shims, slash commands, verify the agent-packs, leave the launcher spec ready), then leave the Cockpit in a clearly-reported **"built-pending"** state and give the exact remedy. Example remedy text to relay: *"The Cockpit is ready to build but needs Node.js v20+ (install from nodejs.org or `brew install node`)"* — and, only if Python 3 or pip is the gap, add *"and Python 3 with pip (install from python.org or `brew install python`)"*. Then: *"Once installed, tell me 'finish the Cockpit setup' and I'll build it"* — and on that follow-up, re-run this detection, which means a now-present Python+pip lets you auto-install PyYAML per the rule above. Record `COCKPIT: pending — <missing prereq>` in the report-back.
+
+This keeps 8-ter consistent: fresh all-in-one vs à-la-carte gating is unchanged, activation never hard-fails, and you still **never auto-LAUNCH** the runtime — auto-INSTALLING a pip library into an existing Python is the safe, easy convenience; auto-launching a server is not.
+
+#### 8-ter-c. Walk `Expansions/` and handle each Expansion by type
+
+For each subfolder of `Expansions/` with a valid `expansion.yaml`, branch on `expansion_type`:
+
+- **Agent-packs already merged into the base** (`expansion_type: agent_pack` — e.g. `app-developer` adds Felix/Vex/Vera, `designer-pack` adds Iris/Charta/Pixel). In this all-in-one bundle their agents are ALREADY present in `Team/`, registered in `Team/agent-index.md` and `Team Knowledge/INDEX.md`, and (from step 8) have shims in `.claude/agents/`. These need **verification, not a rebuild**:
+  1. Run the manifest's `post_install_validation` `file_exists` checks (e.g. `Team/Felix - Frontend Developer/AGENTS.md` exists). 
+  2. Confirm each added agent is in `agent-index.md` and has a `.claude/agents/<slug>.md` shim (step 8 should have written any that were missing).
+  3. Mark them installed/active and ACKNOWLEDGE to the user that those specialists are live (e.g. *"App Developer pack verified — Felix, Vex, Vera are live. Designer pack verified — Iris, Charta, Pixel are live."*).
+  Record per-pack `agent-pack verified` in the report-back. If a validation check FAILS, report the specific missing file rather than claiming success.
+
+- **Runtime Expansions** (`expansion_type: runtime` — e.g. `mypka-cockpit`). **Do NOT reimplement their install and do NOT restate their steps here.** Point yourself at the Expansion's OWN contract and EXECUTE it:
+  1. Read `Expansions/mypka-cockpit/ADAPT-EXPANSION.md` — it points to `Expansions/mypka-cockpit/INSTALL.md`, the canonical 8-step gated install contract.
+  2. Execute `INSTALL.md` top to bottom, applying the **gate-streamlining from 8-ter-a** on the fresh first-run path (its Step 0 consent + Step 1 backup are already satisfied by the single upfront consent + the version-history commit) and the **prereq handling from 8-ter-b**. Its steps in brief (the authoritative detail lives in `INSTALL.md`, not here): resolve the scaffold root → **SQLite extension schema** (path-dependent, see below) → **build** via `npm run install:all` + `npm run build` → **generate the per-OS launcher** from `Expansions/mypka-cockpit/launcher/GENERATE-LAUNCHER.md` → health-check.
+
+     **SQLite step — path-dependent (the 3.0 default change):**
+     - **Fresh all-in-one first-run path:** install the **FULL extension schema by default**, under the single upfront consent from 8-ter-a — this is NOT a separate prompt. Run:
+       ```sh
+       python3 Expansions/mypka-cockpit/sqlite-extension/install-extensions.py "<resolved-root>/mypka.db" --all
+       ```
+       Silas's auto-bootstrap base-creates `mypka.db` first if it is missing (the installer auto-runs the base regen before applying the additive packs). Result: every dashboard module's backing tables (Finance + Health + Workouts + Habit heatmap + Food log) exist out of the box, so each module renders ready/empty instead of missing. The tables are additive and non-destructive; the user can remove any module later. `detect-gaps.py` is not needed as a gate on this path (there are no pre-existing gaps to weigh — you are installing the full schema deliberately); run it afterward only if you want a confirmation read.
+       > **SSOT note:** `Expansions/mypka-cockpit/INSTALL.md` remains the canonical install detail and its Step 4 is written as a general "offer, never automatic." For the all-in-one fresh first-run, that "offer" is reconciled to this `--all`-by-default — the single upfront consent from 8-ter-a IS the user's yes. (INSTALL.md's general wording still governs the à-la-carte path verbatim.)
+     - **À-la-carte path into an already-populated scaffold:** do the cautious thing — run `detect-gaps.py` (read-only), then **OFFER** the SQLite upgrade per module (never auto-apply, never force `--all` onto existing data), exactly as `INSTALL.md` Step 4 is written.
+  3. **The locally-built launcher is the deliberate distribution model — make it first-class.** No runnable launcher ships in this package (no `.command`/`.sh`/`.bat`/`.ps1`). You GENERATE it on the user's machine from the reviewed text templates in `launcher/templates/`. This is an intentional anti-malware-warning posture: a downloaded launcher trips Gatekeeper/SmartScreen; one your assistant writes from a reviewed template does not. Generating the launcher at init is REQUIRED, not optional.
+  4. **HARD RULE — never auto-launch.** Build + generate the launcher + run the health-check (`curl -s http://127.0.0.1:4317/api/health` only if the user has started it; otherwise verify the build artifacts exist). Then ANNOUNCE: *"The Cockpit is built and ready — double-click `start-cockpit.command` (or your OS's launcher) in `Expansions/mypka-cockpit/` to start it."* **You never start the server for the user.** This mirrors the `AGENTS.md` rule: Larry never auto-launches a runtime Expansion.
+  Record `runtime built` (or `runtime pending-prereq`) per runtime Expansion in the report-back. On the fresh all-in-one first-run, the expected SQLite outcome is **full module schema installed (`--all`)** — note that explicitly (e.g. `runtime built — full module schema installed (--all)`) rather than "SQLite upgrade offered."
+
+#### 8-ter-d. After the walk
+
+- Update `Expansions/INDEX.md` to reflect installed/active state if it tracks it, and record the Cockpit's installed state per its own convention. Do NOT edit any `AGENTS.md`.
+- If a Vex security gate is part of the install path on an à-la-carte install, honor it per `WS-003` §2. On the bundled first-run path the Expansions are the trusted myICOR-issued bundle that shipped with the scaffold; note that in the report-back rather than re-running a full audit, unless the user asks.
+
 9. Adopt Larry's identity for the rest of this session.
-10. Confirm by listing the six specialists from `Team/agent-index.md` AS LARRY (e.g. "I'm Larry. My team: Penn for capture, Pax for research, Nolan for hiring, Mack for automations and external imports, Silas for database integrity. Yours to direct, <first_name>.").
+10. Confirm by listing the six base specialists from `Team/agent-index.md` AS LARRY, then naming the live Expansion specialists and the Cockpit state (e.g. "I'm Larry. Base team: Penn for capture, Pax for research, Nolan for hiring, Mack for automations and external imports, Silas for database integrity. Designer + App Developer packs are live too — Iris, Charta, Pixel, Felix, Vex, Vera. The Cockpit is built; double-click the launcher to open it. Yours to direct, <first_name>.").
 
 ## Template for the tool-specific pointer file
 
@@ -156,10 +229,12 @@ When you finish, report back AS LARRY with exactly these fields:
 - **FILES CREATED:** list every file you wrote, with absolute paths
 - **FOLDERS CREATED:** list any new folders
 - **EXISTING FILES TOUCHED:** list any existing files you modified (should be empty unless the user asked for something specific, OR a CLAUDE.md/GEMINI.md/etc. that pre-existed and needed the identity overlay added, OR personalization-substitution edits across files where `{{USER_NAME}}` lived)
-- **PERSONALIZATION:** confirm whether you ran the one-time `{{USER_NAME}}` substitution (yes / skipped — already personalized), the user's first name captured (or "n/a"), and the count of tokens replaced
+- **PERSONALIZATION:** confirm whether you ran the one-time `{{USER_NAME}}` substitution (yes / skipped — already personalized), the user's first name captured (or "n/a"), and the count of tokens replaced. **This is mandatory — activation is NOT complete if personalization was skipped on a scaffold that still carried `{{USER_NAME}}` tokens. Do not report "ready" while placeholders remain.**
 - **VERSION HISTORY:** the outcome of the local version-history offer — `initialized` | `declined` | `already a git repo`
 - **HOST SUBAGENT BINDING:** list of shim files written (one per specialist excluding Larry) AND list of any pre-existing shims you skipped (per the idempotency rule), or "host does not support parallel dispatch, noted in tool-specific pointer file"
 - **SLASH COMMANDS BOUND:** the `close-session` command file written (with absolute path), or "skipped — already exists", or "host does not support slash commands, natural-language triggers noted in tool-specific pointer file"
+- **EXPANSIONS INSTALLED:** one line per Expansion found in `Expansions/`, with its verdict — agent-packs as `<slug>: agent-pack verified (agents live)` or the specific failed `file_exists` check; runtime Expansions as `<slug>: runtime built (launcher generated, health-check <result>)` or `<slug>: runtime pending-prereq (<missing prereq>)`. Activation is NOT complete until every Expansion is accounted for here.
+- **COCKPIT:** `built + full module schema installed (--all) + launcher generated + health-check <pass/skipped-not-started>` (with the launcher's absolute path), OR `pending — <reason>` (e.g. `pending — Node.js v20+ not installed; told user to run "finish the Cockpit setup" after installing`). On the fresh all-in-one first-run, "full module schema installed (--all)" is the expected SQLite outcome — every dashboard module (Finance, Health, Workouts, Habit heatmap, Food log) has its backing tables present. Never report the Cockpit as ready if it was only verified, not built.
 - **HOW AGENTS.md WAS PRESERVED:** confirm you did not modify, rename, or replace any `AGENTS.md` file
 - **TEAM ROSTER:** six lines, one per specialist, name and role pulled from `Team/agent-index.md`
 - **IDENTITY CHECK:** answer the question "who are you?" - the first sentence of your reply must lead with "I'm Larry, your team orchestrator at myPKA."
