@@ -42,6 +42,9 @@ SCHEMA
     (any PKM/<Library>/         -> a mirror table, per the LIBRARIES config block)
     PKM/Journal/YYYY/MM/        -> journal (+ journal_media from ## Media)
     Deliverables/               -> deliverables
+    Team Knowledge/Workstreams/ -> workstreams (header-bullet metadata, no YAML fm)
+    Team Knowledge/SOPs/        -> sops        (header-bullet metadata, no YAML fm)
+    Team Knowledge/Guidelines/  -> guidelines  (header-bullet metadata, no YAML fm)
     Team/<Name - Role>/         -> agents
     [[wikilinks]] in any body   -> links
     (titles + bodies, all above) -> notes_fts (FTS5 global search; see DATA-CONTRACT §13)
@@ -79,6 +82,12 @@ OWNED_TABLES = [
     "key_elements", "habits", "documents", "deliverables",
     "journal", "journal_media", "agents", "agent_journal", "links", "meta",
     "transactions", "quotes", "outer_world",
+    # Governance docs (item: cockpit Team-Knowledge browser). One table per family,
+    # indexed from Team Knowledge/Workstreams|SOPs|Guidelines. Their metadata lives
+    # in a `- **Label:** value` bullet block under the H1 (NOT YAML frontmatter), so
+    # the regen parses that header block instead of fm. See the governance-docs pass
+    # in main() and the header_block_fields() helper.
+    "workstreams", "sops", "guidelines",
     # Library foundation (07-library-foundation.sql): the registry + the two
     # built-in libraries. A user-added library's table name (from LIBRARIES below)
     # is appended at runtime so the regen rebuilds it each run — see main().
@@ -332,6 +341,42 @@ CREATE TABLE movies (
   genre TEXT, director_creator TEXT, platform TEXT, date_watched TEXT,
   progress TEXT, total_seasons INTEGER, episodes_watched INTEGER, verdict TEXT,
   tags TEXT, body TEXT, file_path TEXT, raw_frontmatter TEXT);
+-- ── Governance docs (Team Knowledge browser) ──────────────────────────────────
+-- workstreams / sops / guidelines mirror the three Team Knowledge doc families. These
+-- files carry NO YAML frontmatter: their metadata lives in a `- **Label:** value`
+-- bullet block directly under the H1 (Status / Owner(s) / Default owner / Type /
+-- Version / Triggered by / References). The regen parses THAT block (see
+-- header_block_fields()) rather than fm. Identical column shape across the three so the
+-- cockpit can render them through one generic doc view:
+--   slug        filename stem (e.g. 'WS-001-daily-journaling') — the route key
+--   doc_id      the formal id prefix ('WS-001'/'SOP-001'/'GL-001'); NULL for the
+--               un-numbered task SOPs (sop-create-task, …)
+--   title       the H1 (always present in these docs)
+--   status      `- **Status:**` value if present, else NULL (NOT invented)
+--   owner       `- **Owner:**` / `- **Owners:**` / `- **Default owner:**` value, else NULL
+--   doc_type    'workstream' | 'sop' | 'guideline' (the family discriminator)
+--   summary     first prose paragraph after the header bullet block (same technique as
+--               agents.bio), else NULL
+--   version     `- **Version:**` value if present, else NULL
+--   triggered_by `- **Triggered by:**` / `- **Trigger:**` value if present, else NULL
+--   tags        `- **Tags:**` list if present (none ship today), else NULL
+-- body wikilinks (incl. the References bullets) become `links` edges; title+body feed
+-- notes_fts. domain/category have no source label in these docs today → not a column.
+CREATE TABLE workstreams (
+  id INTEGER PRIMARY KEY, slug TEXT NOT NULL, doc_id TEXT, title TEXT,
+  status TEXT, owner TEXT, doc_type TEXT DEFAULT 'workstream', summary TEXT,
+  version TEXT, triggered_by TEXT, tags TEXT,
+  body TEXT, file_path TEXT, raw_frontmatter TEXT);
+CREATE TABLE sops (
+  id INTEGER PRIMARY KEY, slug TEXT NOT NULL, doc_id TEXT, title TEXT,
+  status TEXT, owner TEXT, doc_type TEXT DEFAULT 'sop', summary TEXT,
+  version TEXT, triggered_by TEXT, tags TEXT,
+  body TEXT, file_path TEXT, raw_frontmatter TEXT);
+CREATE TABLE guidelines (
+  id INTEGER PRIMARY KEY, slug TEXT NOT NULL, doc_id TEXT, title TEXT,
+  status TEXT, owner TEXT, doc_type TEXT DEFAULT 'guideline', summary TEXT,
+  version TEXT, triggered_by TEXT, tags TEXT,
+  body TEXT, file_path TEXT, raw_frontmatter TEXT);
 CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT);
 
 -- ── Global full-text search (FTS5, item-8) ─────────────────────────────────────
@@ -366,6 +411,9 @@ CREATE INDEX idx_transactions_invoice ON transactions (linked_invoice_slug);
 CREATE INDEX idx_documents_payment_status ON documents (payment_status);
 CREATE INDEX idx_outer_world_captured_on ON outer_world (captured_on);
 CREATE INDEX idx_outer_world_source_type ON outer_world (source_type);
+CREATE INDEX idx_workstreams_doc_id ON workstreams (doc_id);
+CREATE INDEX idx_sops_doc_id ON sops (doc_id);
+CREATE INDEX idx_guidelines_doc_id ON guidelines (doc_id);
 
 -- ── Invoice views (Silas-owned; OWNED_VIEWS) ───────────────────────────────────
 -- Open invoices with DERIVED due-state. Overdue / due-soon are computed here from
@@ -434,6 +482,10 @@ MIME_BY_EXT = {
 TYPE_PRIORITY = [
     "people", "organizations", "projects", "goals", "topics",
     "key_elements", "habits", "documents", "deliverables", "journal",
+    # governance docs: heavy link TARGETS (every References bullet, every agent
+    # contract points at a WS-/SOP-/GL-). Slugs are id-prefixed so collisions with
+    # entity notes are effectively impossible; placed below entities for safety.
+    "workstreams", "sops", "guidelines",
     # agents are link SOURCES (their AGENTS.md links out to SOPs/WS/GL) and may
     # also be link TARGETS (a note linking [[silas]]); lowest priority so a slug
     # collision with a real entity note always resolves to the entity.
@@ -674,6 +726,64 @@ def extract_links(body: str):
     return out
 
 
+# Governance docs carry their metadata as a `- **Label:** value` bullet block right
+# under the H1 (these files have NO YAML frontmatter). Match a bullet whose first
+# token is a bold label ending in a colon.
+HEADER_BULLET_RE = re.compile(r"^\s*[-*]\s+\*\*(.+?):\*\*\s*(.*)$")
+
+
+def header_block_fields(body: str) -> dict:
+    """Parse the leading `- **Label:** value` bullet block of a governance doc.
+
+    Reads ONLY the first contiguous run of bold-label bullets after the H1 (so a
+    `- **Path:**` bullet buried deep in the body is never mistaken for a header
+    field). Returns {label_lower: value}. Wikilinks in values are kept verbatim
+    (callers slug/strip as needed). A doc with no such block returns {}."""
+    fields: dict[str, str] = {}
+    in_block = False
+    for line in body.splitlines():
+        m = HEADER_BULLET_RE.match(line)
+        if m:
+            in_block = True
+            fields[m.group(1).strip().lower()] = m.group(2).strip()
+            continue
+        if in_block:
+            # A blank line inside the block is tolerated; first non-blank,
+            # non-bullet line ends the header block.
+            if line.strip() == "":
+                continue
+            break
+    return fields
+
+
+def header_summary(body: str) -> str | None:
+    """First real prose paragraph after the H1 + header bullet block — the doc's
+    one-line gist (mirrors the agents.bio extraction). Skips headings, bullets,
+    tables, blockquotes. None if nothing prose-shaped is found."""
+    for para in re.split(r"\n\s*\n", body):
+        p = para.strip()
+        if not p:
+            continue
+        first = p.splitlines()[0].lstrip()
+        if first.startswith(("#", "-", "*", "|", ">")):
+            continue
+        return re.sub(r"\s+", " ", p)[:400]
+    return None
+
+
+# Governance-doc families -> (table, source folder, doc_type, id-prefix regex).
+# The id-prefix regex pulls the formal doc id (WS-001 / SOP-001 / GL-001) off the
+# filename stem; un-numbered task SOPs (sop-create-task, …) match nothing -> NULL.
+GOVERNANCE_FAMILIES = [
+    ("workstreams", Path("Team Knowledge/Workstreams"), "workstream",
+     re.compile(r"^(WS-\d+)", re.IGNORECASE)),
+    ("sops", Path("Team Knowledge/SOPs"), "sop",
+     re.compile(r"^(SOP-\d+)", re.IGNORECASE)),
+    ("guidelines", Path("Team Knowledge/Guidelines"), "guideline",
+     re.compile(r"^(GL-\d+)", re.IGNORECASE)),
+]
+
+
 def main():
     if not (ROOT / "PKM").is_dir():
         sys.exit(f"This does not look like a myPKA root (no PKM/ folder): {ROOT}")
@@ -883,6 +993,63 @@ def main():
             link_rows.append(("deliverables", slug, raw, tslug, ltype))
         rows += 1
     stats["deliverables"] = rows
+
+    # ---- governance docs (Team Knowledge/Workstreams|SOPs|Guidelines) -----------
+    # One loop mirrors all three families. These docs have NO YAML frontmatter; their
+    # metadata is a `- **Label:** value` bullet block under the H1 (parsed by
+    # header_block_fields). Recursive so a family's subfolder (e.g. Workstreams/myicor/)
+    # is indexed too; INDEX.md is skipped generically (SKIP_NAMES). slug = filename stem;
+    # doc_id = the formal WS-/SOP-/GL- prefix (NULL for un-numbered task SOPs). Title is
+    # the H1. status/owner/version/triggered_by come ONLY from the header block (NULL when
+    # absent — never invented). Body wikilinks (incl. the References bullets) become graph
+    # edges; title+body feed notes_fts. raw_frontmatter is the parsed header block as JSON
+    # (these docs have no fm, so this is the closest structured echo for the cockpit's
+    # Properties panel).
+    for table, rel, doc_type, id_re in GOVERNANCE_FAMILIES:
+        rows = 0
+        for path in md_files(ROOT / rel, recursive=True):
+            fm, body = read_note(path)  # fm is {} for these (no YAML); body is full text
+            slug = path.stem
+            file_path = str(path.relative_to(ROOT))
+            hdr = header_block_fields(body)
+            id_m = id_re.match(slug)
+            doc_id = id_m.group(1).upper() if id_m else None
+            title = title_from(fm, body, slug, "title")
+            owner = hdr.get("owner") or hdr.get("owners") or hdr.get("default owner")
+            if owner:
+                # These values can be multi-owner narrative with inline **bold** and
+                # [[wikilinks]]; flatten both so the cockpit renders clean display text.
+                owner = re.sub(r"\*\*(.+?)\*\*", r"\1", owner)
+                owner = re.sub(r"\[\[([^\]\[]+?)\]\]",
+                               lambda m: m.group(1).split("|")[0].split("#")[0],
+                               owner).strip() or None
+            status = hdr.get("status")
+            version = hdr.get("version")
+            triggered_by = hdr.get("triggered by") or hdr.get("trigger")
+            # tags: header block almost never has them today, but honor a `Tags:` line.
+            tags_raw = hdr.get("tags")
+            tags = None
+            if tags_raw:
+                parts = [t.strip() for t in re.split(r"[,;]", tags_raw) if t.strip()]
+                tags = json.dumps(parts, ensure_ascii=False) if parts else None
+            cur.execute(
+                f"INSERT INTO {table} (slug, doc_id, title, status, owner, doc_type,"
+                f" summary, version, triggered_by, tags, body, file_path, raw_frontmatter)"
+                f" VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                (slug, doc_id, title, status, owner, doc_type,
+                 header_summary(body), version, triggered_by, tags,
+                 body.strip(), file_path,
+                 json.dumps(jsonable(hdr), ensure_ascii=False)))
+            # Resolver registration uses the LOWERCASED slug: governance filename stems
+            # carry uppercase id prefixes (GL-001-…, WS-…, SOP-…) but extract_links()
+            # lowercases every target via slug_of(), so an incoming [[GL-001-…]] reference
+            # only resolves its target_table if the resolver key is lowercased too. The
+            # stored `slug` column keeps the original-case stem (the cockpit route key).
+            register(table, slug.lower())
+            for raw, tslug, ltype in extract_links(body):
+                link_rows.append((table, slug, raw, tslug, ltype))
+            rows += 1
+        stats[table] = rows
 
     # ---- quotes (PKM/Quotes/, md-first, doc_type: quote) ------------------------
     # One markdown file per quote. The quote TEXT is the note body (canonical), with
@@ -1157,6 +1324,9 @@ def main():
         ("deliverables",  "title",             "body"),
         ("journal",       "title",             "content"),
         ("outer_world",   "title",             "body"),
+        ("workstreams",   "title",             "body"),
+        ("sops",          "title",             "body"),
+        ("guidelines",    "title",             "body"),
     ]
     # Every library mirror table carries the invariant (title, body) columns.
     for lib in LIBRARIES:
@@ -1193,6 +1363,7 @@ def main():
     for t in ("people", "organizations", "topics", "projects", "goals",
               "key_elements", "habits", "documents", "journal",
               "deliverables", "quotes", "outer_world", "agents", "agent_journal",
+              "workstreams", "sops", "guidelines",
               "transactions", "links"):
         print(f"    {t:<14} {stats.get(t, 0):>6} rows")
     for lib in LIBRARIES:

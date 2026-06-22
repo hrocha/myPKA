@@ -5,10 +5,12 @@
 // the Cmd/Ctrl+B toggle, and the mobile off-canvas that collapses into an
 // overlay. Built with the design tokens + ZERO new deps (structure and a11y
 // contract reproduced, not the package).
+import { useEffect, useId, useRef, useState } from 'react';
 import {
   NotebookPen, Sparkles, Users, Hash, FolderKanban,
   KeyRound, Repeat2, Target, Building2, FileText, Package, PanelLeftClose,
   UsersRound, LayoutDashboard, StickyNote, Plug, SlidersHorizontal, Search,
+  ScrollText, ListChecks, BookText, ChevronRight,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { NavType, EntityType } from '../lib/cockpitTypes';
@@ -42,6 +44,13 @@ interface SidebarProps {
 // Mac shows ⌘K; everyone else shows Ctrl+K. navigator.platform is deprecated but
 // still the most reliable client-side OS hint for this cosmetic shortcut badge.
 const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
+
+// The five routes the "My AI Team" fly-out leads to. The trigger row stays lit
+// while any of them is the active route.
+const TEAM_ROUTES = ['roster', 'session-log', 'workstreams', 'sops', 'guidelines'] as const;
+function isTeamRoute(route: Route): boolean {
+  return (TEAM_ROUTES as readonly string[]).includes(route.name);
+}
 
 function isActive(route: Route, target: Route): boolean {
   // The "Fleeting Notes" nav (target #/notes) stays lit inside an open doc
@@ -91,6 +100,144 @@ function ModuleRows({
         />
       ))}
     </>
+  );
+}
+
+// The five fly-out destinations under "My AI Team", in display order. Each is a
+// core Route the App's ContentRouter renders as its own full page.
+const TEAM_FLYOUT_ITEMS: ReadonlyArray<{ route: Route; label: string; icon: LucideIcon }> = [
+  { route: { name: 'roster' }, label: S.team.flyout.roster, icon: UsersRound },
+  { route: { name: 'session-log' }, label: S.team.flyout.sessionLog, icon: ScrollText },
+  { route: { name: 'workstreams' }, label: S.team.flyout.workstreams, icon: Repeat2 },
+  { route: { name: 'sops' }, label: S.team.flyout.sops, icon: ListChecks },
+  { route: { name: 'guidelines' }, label: S.team.flyout.guidelines, icon: BookText },
+];
+
+// "My AI Team" — a fly-out trigger. Clicking the row opens a submenu (a fly-out
+// panel) anchored to the row, offering the five team destinations. Accessibility
+// mirrors the cockpit's existing menu popovers (BoardView): aria-haspopup +
+// aria-expanded on the trigger, a role="menu" panel of role="menuitem" links,
+// Escape closes + returns focus, outside-click + route-change close, Up/Down/
+// Home/End arrow navigation within the menu, and first-item autofocus on open.
+function TeamFlyout({ route, onNavigate }: { route: Route; onNavigate: () => void }) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLLIElement | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const itemRefs = useRef<Array<HTMLAnchorElement | null>>([]);
+  const menuId = useId();
+  const active = isTeamRoute(route);
+
+  // Close on outside click/tap.
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [open]);
+
+  // Close when the route changes (a selection navigated away).
+  useEffect(() => { setOpen(false); }, [route]);
+
+  // Focus the first item when the menu opens.
+  useEffect(() => {
+    if (open) itemRefs.current[0]?.focus();
+  }, [open]);
+
+  const closeAndReturnFocus = () => {
+    setOpen(false);
+    triggerRef.current?.focus();
+  };
+
+  const onItemKeyDown = (e: React.KeyboardEvent, index: number) => {
+    const last = TEAM_FLYOUT_ITEMS.length - 1;
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        itemRefs.current[index === last ? 0 : index + 1]?.focus();
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        itemRefs.current[index === 0 ? last : index - 1]?.focus();
+        break;
+      case 'Home':
+        e.preventDefault();
+        itemRefs.current[0]?.focus();
+        break;
+      case 'End':
+        e.preventDefault();
+        itemRefs.current[last]?.focus();
+        break;
+      case 'Escape':
+        e.preventDefault();
+        closeAndReturnFocus();
+        break;
+      default:
+        break;
+    }
+  };
+
+  const onTriggerKeyDown = (e: React.KeyboardEvent) => {
+    if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && !open) {
+      e.preventDefault();
+      setOpen(true);
+    } else if (e.key === 'Escape' && open) {
+      e.preventDefault();
+      closeAndReturnFocus();
+    }
+  };
+
+  return (
+    <li className="menu-item team-flyout-wrap" ref={wrapRef}>
+      <button
+        type="button"
+        ref={triggerRef}
+        className="menu-button team-flyout-trigger"
+        data-active={active}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-controls={open ? menuId : undefined}
+        onClick={() => setOpen((o) => !o)}
+        onKeyDown={onTriggerKeyDown}
+      >
+        <UsersRound size={18} strokeWidth={1.5} aria-hidden="true" className="menu-icon" />
+        <span className="menu-label">{S.team.menuLabel}</span>
+        <ChevronRight
+          size={15}
+          strokeWidth={1.5}
+          aria-hidden="true"
+          className={`team-flyout-caret ${open ? 'is-open' : ''}`}
+        />
+      </button>
+
+      {open && (
+        <div
+          id={menuId}
+          className="team-flyout-menu"
+          role="menu"
+          aria-label={S.team.menuAria}
+        >
+          {TEAM_FLYOUT_ITEMS.map((item, i) => (
+            <a
+              key={item.route.name}
+              ref={(el) => { itemRefs.current[i] = el; }}
+              href={hrefFor(item.route)}
+              role="menuitem"
+              tabIndex={-1}
+              className="team-flyout-item"
+              data-active={isActive(route, item.route)}
+              aria-current={isActive(route, item.route) ? 'page' : undefined}
+              onClick={() => { setOpen(false); onNavigate(); }}
+              onKeyDown={(e) => onItemKeyDown(e, i)}
+            >
+              <item.icon size={16} strokeWidth={1.5} aria-hidden="true" className="team-flyout-item-icon" />
+              <span className="team-flyout-item-label">{item.label}</span>
+            </a>
+          ))}
+        </div>
+      )}
+    </li>
   );
 }
 
@@ -227,10 +374,10 @@ export function Sidebar({ navTypes, route, open, onToggle, onNavigate, onOpenSea
               icon={Plug} label="Connections" href={hrefFor({ name: 'connections' })}
               active={isActive(route, { name: 'connections' })} onClick={onNavigate}
             />
-            <NavRow
-              icon={UsersRound} label="My AI Team" href={hrefFor({ name: 'roster' })}
-              active={isActive(route, { name: 'roster' })} onClick={onNavigate}
-            />
+            {/* "My AI Team" — a fly-out trigger (not a plain link). Opens a submenu
+                of the five team destinations (Roster / Session Log / Workstreams /
+                SOPs / Guidelines). */}
+            <TeamFlyout route={route} onNavigate={onNavigate} />
             <NavRow
               icon={SlidersHorizontal} label="Settings" href={hrefFor({ name: 'settings' })}
               active={isActive(route, { name: 'settings' })} onClick={onNavigate}

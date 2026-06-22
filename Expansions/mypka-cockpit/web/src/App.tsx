@@ -14,6 +14,8 @@ import { CommandPalette } from './components/CommandPalette';
 import { HubView } from './views/HubView';
 import { JournalView } from './views/JournalView';
 import { RosterView } from './views/RosterView';
+import { SessionLogView } from './views/SessionLogView';
+import { TeamKnowledgeListView } from './views/TeamKnowledgeListView';
 import { ConnectionsView } from './views/ConnectionsView';
 import { SettingsView } from './views/SettingsView';
 import { TypeListView } from './views/TypeListView';
@@ -99,6 +101,18 @@ export default function App() {
     (route.name === 'module' && moduleForSlug(route.slug)?.fullBleed) ||
     (route.name === 'outer-world' && !route.slug && moduleForSlug('outer-world')?.fullBleed);
 
+  // Full-HEIGHT "My AI Team" surfaces (roster / session log / workstreams / sops /
+  // guidelines). These keep the centered reading column BUT must fill the viewport
+  // height so their inner panel scrolls instead of leaving a short floating card.
+  // The class makes .cockpit-content a flex column that fills .cockpit-main's height
+  // (cockpit.css .cockpit-content--team); the team view owns the inner scroll.
+  const teamFull =
+    route.name === 'roster' ||
+    route.name === 'session-log' ||
+    route.name === 'workstreams' ||
+    route.name === 'sops' ||
+    route.name === 'guidelines';
+
   return (
     <div className={`cockpit-shell ${sidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
       <Sidebar
@@ -126,7 +140,7 @@ export default function App() {
           </div>
         )}
 
-        <div className={`cockpit-content ${fullBleed ? 'cockpit-content--full' : ''}`}>
+        <div className={`cockpit-content ${fullBleed ? 'cockpit-content--full' : ''} ${teamFull ? 'cockpit-content--team' : ''}`}>
           <ContentRouter route={route} />
         </div>
       </div>
@@ -139,6 +153,10 @@ function ContentRouter({ route }: { route: ReturnType<typeof useRoute> }) {
     case 'hub': return <HubView />;
     case 'journal': return <JournalView />;
     case 'roster': return <RosterView />;
+    case 'session-log': return <SessionLogView />;
+    case 'workstreams': return <TeamKnowledgeListView family="workstreams" />;
+    case 'sops': return <TeamKnowledgeListView family="sops" />;
+    case 'guidelines': return <TeamKnowledgeListView family="guidelines" />;
     case 'connections': return <ConnectionsView />;
     case 'settings': return <SettingsView />;
     case 'notes':

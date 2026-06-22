@@ -371,5 +371,97 @@
   border: 1px solid var(--border-subtle); color: var(--fg-subtle);
 }
 
+/* ============================================================================
+   FULL-HEIGHT single-column team pages (v3.1.0 split). The combined two-column
+   page (.team-page above, retained but unused) was replaced by FIVE distinct
+   pages — Roster, Session Log, Workstreams, SOPs, Guidelines — each a single
+   full-height column. The page header sits at the top; below it a labelled
+   section fills the remaining height; the list scrolls INSIDE .team-solo-scroll
+   (its own overflow region) so the window itself never scrolls a short card.
+
+   The height budget comes from the shell: App adds .cockpit-content--team to the
+   content wrapper for these routes (cockpit.css), giving it a definite viewport
+   height + flex-column layout. Here we make .team-solo-view the single flex child
+   that fills it, and .team-solo-scroll the contained scroll region.
+   Tokens only; verified light + dark.
+   ========================================================================== */
+.team-solo-view {
+  flex: 1 1 auto;
+  min-height: 0;          /* let the flex child shrink so the inner scroll engages */
+  display: flex;
+  flex-direction: column;
+}
+/* The header is content-sized; the column below it takes the rest. */
+.team-solo-view > .page-header { flex: 0 0 auto; }
+
+.team-solo-col {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.team-solo-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 6px;     /* room for the scrollbar so cards aren't clipped */
+}
+
+/* ---- Team-Knowledge list rows (Workstreams / SOPs / Guidelines) ------------
+   Mirrors the calm card idiom of the session-log + roster rows: a bordered
+   surface card, a head line (formal id chip + title), an optional meta chip line
+   (status / owner / version), and a two-line clamped summary. The whole row is a
+   link to the file-reading page when a file_path is present. GL-003 tokens only;
+   the `truncate` class is never used (a -webkit-line-clamp is). */
+.tk-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.tk-row-li { list-style: none; }
+
+.tk-row {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  background: var(--surface-1);
+  padding: 14px 16px;
+  text-decoration: none;
+  color: inherit;
+}
+.tk-row--nav {
+  cursor: pointer;
+  transition: border-color 150ms ease, background-color 150ms ease;
+}
+.tk-row--nav:hover { border-color: var(--accent-brass); background: var(--surface-2); }
+.tk-row--nav:focus-visible { outline: 2px solid var(--accent-brass); outline-offset: 2px; }
+
+.tk-row-head { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; }
+.tk-row-id {
+  flex: 0 0 auto;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.6875rem; letter-spacing: 0.03em;
+  padding: 2px 8px; border-radius: 999px;
+  background: var(--accent-soft); color: var(--accent-brass);
+}
+.tk-row-title { font-size: 0.9375rem; font-weight: 520; color: var(--fg); line-height: 1.3; }
+.tk-row-arrow { flex: 0 0 auto; color: var(--fg-subtle); margin-left: auto; }
+
+.tk-row-meta { display: flex; flex-wrap: wrap; gap: 6px; }
+.tk-meta-chip {
+  font-size: 0.6875rem; letter-spacing: 0.03em;
+  padding: 2px 8px; border-radius: 999px;
+  border: 1px solid var(--border-subtle); color: var(--fg-subtle);
+}
+.tk-meta-chip--status { border-color: var(--accent-brass); color: var(--accent-brass); }
+
+.tk-row-summary {
+  font-size: 0.875rem; line-height: 1.5; color: var(--fg-muted);
+  display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2;
+  -webkit-box-orient: vertical; overflow: hidden;
+}
+
 /* ---- Reduced motion / the page wrapper ------------------------------------ */
 .team-page-view { min-width: 0; }

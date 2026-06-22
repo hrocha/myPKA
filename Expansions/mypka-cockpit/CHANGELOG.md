@@ -7,7 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 The version in `expansion.yaml` is the single source of truth for a release; the
 root `package.json` and `package-lock.json` mirror it.
 
-## [3.0.1] - 2026-06-22
+## [1.1.0] - 2026-06-22
+
+### Added
+
+- **"My AI Team" fly-out menu.** The Cockpit sidebar gains a dedicated Team fly-out
+  with five destinations: **Team** (the roster), **Session Log**, **Workstreams**,
+  **SOPs**, and **Guidelines**. The team is now first-class navigation, not buried.
+- **Workstreams / SOPs / Guidelines are indexed and browsable.** The
+  `regen-mypka-db.py` mirror gains new tables for the governance docs
+  (`workstreams`, `sops`, `guidelines`), and the Cockpit renders each family as a
+  browsable list view backed by a new read-only endpoint:
+  **`GET /api/cockpit/team-knowledge/:family`** (`:family` ∈
+  `workstreams` | `sops` | `guidelines`), served by the new
+  `server/teamKnowledgeApi.js`.
+
+### Changed
+
+- **Session Log and Roster are now separate, full-height pages.** Previously both
+  shared one cramped view; they are now two distinct routes, each using the full
+  viewport height. Team pages no longer crop their content.
+
+### Migration (existing installs)
+
+- Pull the new Cockpit source (the `web/src` team views, `server/teamKnowledgeApi.js`,
+  `scripts/regen-mypka-db.py`), then **re-run the mirror regen** to populate the new
+  governance tables:
+  `python3 "Expansions/mypka-cockpit/scripts/regen-mypka-db.py"`.
+  Then **rebuild and restart** the Cockpit (`npm run serve`) so the new server route
+  and the rebuilt `web/dist` are live. No scaffold-wide change is required.
+
+## [1.0.1] - 2026-06-22
+
+> *Renumbered 2026-06-22: this entry was originally mislabeled `[3.0.1]` (the
+> scaffold version), but the Cockpit CHANGELOG tracks `expansion.yaml` — which was
+> `1.0.1` for this fix. Corrected to keep the Cockpit's own version series
+> (`1.0.0` → `1.0.1` → `1.1.0`) consistent with its SSOT.*
 
 ### Fixed
 

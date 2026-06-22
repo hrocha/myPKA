@@ -62,6 +62,48 @@ client splits on `" - "`), `folder` (the `Team/` folder name), `agent_status`
 e.g. `Team/Penn - Journal Writer/avatar.png`, or NULL → initials fallback),
 `owner`.
 
+## Governance docs (`workstreams`, `sops`, `guidelines`)
+
+The three Team Knowledge doc families, mirrored so the cockpit can browse them
+like any entity. Sources: `Team Knowledge/Workstreams/**` → `workstreams`,
+`Team Knowledge/SOPs/**` → `sops`, `Team Knowledge/Guidelines/**` →
+`guidelines` (recursive; `INDEX.md` is skipped). **These files carry NO YAML
+frontmatter** — their metadata lives in a `- **Label:** value` bullet block
+directly under the H1. The regen parses that header block (it does *not* invent
+values: a field with no matching label is NULL).
+
+All three tables share one column shape, so a single generic doc view renders
+any of them:
+
+| Column | Type | Source |
+|---|---|---|
+| `id` | INTEGER PK | — |
+| `slug` | TEXT | filename stem, **original case** (e.g. `WS-001-daily-journaling`, `SOP-create-task`) — the route key (`#/<type>/<slug>`) |
+| `doc_id` | TEXT | formal id prefix off the stem (`WS-001` / `SOP-001` / `GL-001`), uppercased; **NULL** for the un-numbered task SOPs (`SOP-create-task`, `SOP-close-task`, …) |
+| `title` | TEXT | the H1 (always present) |
+| `status` | TEXT | `- **Status:**` value, else NULL (most SOPs/GLs have none) |
+| `owner` | TEXT | `- **Owner:**` / `- **Owners:**` / `- **Default owner:**` value, inline `**bold**` + `[[wikilinks]]` flattened to display text; NULL if absent. **May be a multi-owner narrative sentence**, not a single name |
+| `doc_type` | TEXT | `'workstream'` \| `'sop'` \| `'guideline'` (the family discriminator) |
+| `summary` | TEXT | first prose paragraph after the header bullet block (≤400 chars), else NULL |
+| `version` | TEXT | `- **Version:**` value, else NULL. **Free text, not guaranteed semver** (WS-001's is a full changelog sentence) |
+| `triggered_by` | TEXT | `- **Triggered by:**` / `- **Trigger:**` value, else NULL |
+| `tags` | TEXT | JSON array of a `- **Tags:**` line if present (none ship today), else NULL |
+| `body` | TEXT | full markdown body (incl. the header block) |
+| `file_path` | TEXT | myPKA-root-relative |
+| `raw_frontmatter` | TEXT | the parsed **header bullet block** as a JSON object string (these docs have no YAML fm; this is the closest structured echo for a Properties panel) |
+
+Indexes: `(doc_id)` on each table.
+
+`body` wikilinks — including every `- **References:** [[…]]` bullet — flow into
+the `links` graph with `source_table` ∈ {`workstreams`,`sops`,`guidelines`}.
+Incoming references from anywhere (agent contracts, other docs) resolve their
+`target_table` to these tables too (the resolver keys on the lowercased slug,
+while the stored `slug` keeps original case). `title` + `body` feed `notes_fts`
+so full-text search routes hits to `#/<type>/<slug>`.
+
+There is **no `domain`/`category` column**: today's docs carry no such label.
+If a future convention adds one, add the column + parse the label — don't infer.
+
 ## Invoice tracking (documents invoice fields, transactions, and the three views)
 
 A worked, fully-synthetic example of invoice + contract + bank-transaction

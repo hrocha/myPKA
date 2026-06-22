@@ -26,13 +26,15 @@ function extOf(name: string): string {
 }
 
 // Map a file-route src/path to the REPO-relative path the discuss endpoint
-// expects. The /api/cockpit/file jail convention: 'inbox:' paths ("Team Inbox/…")
-// and Deliverables/ paths are already repo-relative; everything else is
-// PKM/-relative (see server.js "Two jails with DIFFERENT base conventions").
+// expects. The /api/cockpit/file jail convention: 'inbox:' paths ("Team Inbox/…"),
+// Deliverables/ paths, and Team Knowledge/ paths are already repo-relative;
+// everything else is PKM/-relative (see server.js "Three jails with DIFFERENT base
+// conventions").
 function repoRelativeFor(src: string, path: string): string {
   if (src.startsWith('inbox:')) return path;
   const norm = path.replace(/\\/g, '/');
   if (norm === 'Deliverables' || norm.startsWith('Deliverables/')) return path;
+  if (norm === 'Team Knowledge' || norm.startsWith('Team Knowledge/')) return path;
   return `PKM/${path}`;
 }
 

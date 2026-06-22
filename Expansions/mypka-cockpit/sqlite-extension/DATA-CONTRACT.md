@@ -43,6 +43,7 @@ ignored; **fewer** columns break the query.
 | **Library** (recipes, movies, + adapted) | `library_registry`, `recipes`, `movies` (+ any adapted library table) | — | `library_registry(library_slug, nav_label, nav_icon, doc_type, sort_order)`; per-library invariant cols + axis cols (see §11) | `doc_type: <recipe\|movie\|…>` discriminator + the library's axis frontmatter fields; body = item detail |
 | **Outer World** (mymind-style saved content) | `outer_world` | — | `outer_world(slug, title, captured_on, source_url, source_type, source_author, embed_*, tom_context, tags, linked_topics, linked_key_elements, linked_projects, linked_people, linked_organizations, body, file_path)` (see §14) | `doc_type: outer-world`, `source_url`, `source_type`, `captured_on`, the FLAT `embed_*` card fields, `tom_context`, `tags`, `linked_*`; body = `## Summary`/`## Clip`/`## Context` |
 | **Graph views** (core) | `links`, entity tables | — | `goals.key_element`, `goals.linked_projects`, `topics.key_element`, `json_extract(raw_frontmatter,'$.lifecycle' / '$.promoted_to' / '$.linked_habits')` | `key_element`, `linked_projects`, `lifecycle`, `promoted_to`, `linked_habits` |
+| **Team Knowledge browser** (governance docs) | `workstreams`, `sops`, `guidelines`, `links` | — | `<table>(slug, doc_id, title, status, owner, doc_type, summary, version, triggered_by, tags, body, file_path, raw_frontmatter)` (see §17); `links WHERE source_table IN ('workstreams','sops','guidelines')` for outbound refs + backlinks | **No YAML frontmatter** — parsed from the `- **Label:** value` header bullet block under the H1 (Status/Owner(s)/Default owner/Type/Version/Triggered by/References). Sources `Team Knowledge/Workstreams\|SOPs\|Guidelines/**`. |
 | **Team roster** (core) | `agents` | — | `slug, name, folder, agent_status, bio, avatar_path, owner` (only `agent_status='active'`) | the `Team/<Name - Role>/AGENTS.md` frontmatter |
 | **My AI Team — member detail** | `agents`, `agent_journal`, `links` | — | `agents(contract_body, contract_frontmatter, file_path, …)`; `agent_journal(agent_slug, title, body, created, …)`; `links WHERE source_table='agents' AND source_slug=?` | the AGENTS.md **body** (contract text) + its frontmatter; the agent's `journal/*.md` entries; the AGENTS.md `[[wikilinks]]` → connection edges. See §16. |
 | **Global search** (core) | `notes_fts` (FTS5) | — | `notes_fts(type, slug, entity_id, title, body)` queried with `MATCH` + `bm25()` + `snippet()` (see §13) | derived — built from titles + bodies of every searchable owned table during regen (no extra frontmatter) |
@@ -795,6 +796,9 @@ CREATE VIRTUAL TABLE notes_fts USING fts5(
   `FTS_SOURCES` list only if a quote route is introduced.
 - One FTS row per searchable note. A user-added library (a dict in `LIBRARIES`) is
   indexed automatically — the regen appends every library table to the FTS sources.
+- **Governance docs are indexed too** — `workstreams`, `sops`, `guidelines` (title +
+  body) are in `FTS_SOURCES`, so a search routes to `#/<type>/<slug>` for them (e.g.
+  `#/sops/SOP-002-convert-mypka-to-sqlite`). See §17.
 
 ### 13.2 The query for Felix's `searchNotes()` — BM25 + snippet (exact shape)
 
@@ -1260,4 +1264,69 @@ degrade to empty results on a leaner mirror.
 > (`contract_body`, `contract_frontmatter`, `agent_journal.*`, `social_links`,
 > `habits.started_on`/`status`) are the agreed names — change them only by editing
 > the regen + this contract together (append-only; never rename a shipped column
+> silently).
+
+## 17. Team Knowledge browser — `workstreams` / `sops` / `guidelines`
+
+The three Team Knowledge doc families, mirrored so the cockpit can browse and
+search them like any entity. Sources (recursive; `INDEX.md` skipped):
+
+| Folder | Table | `doc_type` |
+|---|---|---|
+| `Team Knowledge/Workstreams/**` | `workstreams` | `'workstream'` |
+| `Team Knowledge/SOPs/**` | `sops` | `'sop'` |
+| `Team Knowledge/Guidelines/**` | `guidelines` | `'guideline'` |
+
+### 17.1 The shape (identical across all three)
+
+**These files carry NO YAML frontmatter.** Their metadata lives in a
+`- **Label:** value` bullet block directly under the H1. The regen parses *only*
+the first contiguous bullet block (a `- **Path:**` bullet buried deeper in the
+body is never mistaken for a header field) and never invents a value — an absent
+label is NULL.
+
+| Column | Type | Source / notes |
+|---|---|---|
+| `id` | INTEGER PK | — |
+| `slug` | TEXT | filename stem, **original case** (`WS-001-daily-journaling`, `SOP-create-task`). The route key: `#/<type>/<slug>` |
+| `doc_id` | TEXT | formal id off the stem (`WS-001`/`SOP-001`/`GL-001`), uppercased; **NULL** for un-numbered task SOPs (`SOP-create-task`, `SOP-close-task`, `SOP-read-own-journal`, …) |
+| `title` | TEXT | the H1 (always present) |
+| `status` | TEXT | `- **Status:**`, else NULL. Only WS-00x + a few SOPs carry it (e.g. `Active (since v1.4.0)`) |
+| `owner` | TEXT | `- **Owner:**`/`- **Owners:**`/`- **Default owner:**`, with inline `**bold**` + `[[wikilinks]]` flattened. **May be a multi-owner narrative sentence**, not one name |
+| `doc_type` | TEXT | family discriminator (table above) |
+| `summary` | TEXT | first prose paragraph after the header block (≤400 chars), else NULL |
+| `version` | TEXT | `- **Version:**`, else NULL. **Free text, not guaranteed semver** (WS-001's is a full changelog sentence) |
+| `triggered_by` | TEXT | `- **Triggered by:**`/`- **Trigger:**`, else NULL |
+| `tags` | TEXT | JSON array of a `- **Tags:**` line if present (none ship today), else NULL |
+| `body` | TEXT | full markdown body (incl. the header block) |
+| `file_path` | TEXT | myPKA-root-relative |
+| `raw_frontmatter` | TEXT | the parsed **header bullet block** as a JSON object string (closest structured echo for a Properties panel; these docs have no real fm) |
+
+Indexes: `idx_<table>_doc_id` on `(doc_id)` each.
+
+### 17.2 Links + search
+
+- `body` wikilinks — **including every `- **References:** [[…]]` bullet** — flow
+  into `links` with `source_table` ∈ {`workstreams`,`sops`,`guidelines`}.
+- **Incoming** references (from agent contracts, other docs) resolve their
+  `target_table` to these tables: the resolver keys on the **lowercased** slug
+  while the stored `slug` keeps original case (the governance stems are
+  upper-case `GL-`/`WS-`/`SOP-`, but every `target_slug` is lowercased by the
+  link extractor — registering the lowercase form is what makes incoming
+  `[[GL-001-…]]` edges resolve). So the connections canvas works in both
+  directions via the same `idx_links_source` / `idx_links_target` paths.
+- `title` + `body` feed `notes_fts` (§13), so search routes to `#/<type>/<slug>`.
+
+### 17.3 What is NOT here
+
+- **No `domain`/`category` column.** Today's docs carry no such label; inventing
+  one would be guessing. Add the column + parse the label only if a future
+  convention introduces it.
+- `status`/`version`/`triggered_by`/`owner` are **sparse** — most SOPs and all
+  GLs have no Status or Version line. Render them as optional fields; never
+  fabricate a default.
+
+> **Coordination:** Felix builds the Team Knowledge browser UI against this
+> contract. Field names are the agreed names — change them only by editing the
+> regen + this contract together (append-only; never rename a shipped column
 > silently).

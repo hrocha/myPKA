@@ -223,6 +223,85 @@
   font-weight: 460;
 }
 .menu-button[data-active='true'] .menu-icon { color: var(--accent-brass); }
+
+/* ---- "My AI Team" fly-out (v3.1.0) ----------------------------------------
+   The trigger is a <button> styled as a menu row; it carries the disclosure
+   caret. The fly-out panel anchors to the row and pops OUT to the right (it sits
+   in the bottom rail, so it's bottom-aligned and opens UPWARD to stay on-screen).
+   Brass accents + GL-003 tokens only; verified light + dark. */
+.team-flyout-trigger {
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  text-align: left;
+}
+.team-flyout-trigger:focus-visible {
+  outline: 2px solid var(--accent-brass);
+  outline-offset: 2px;
+}
+.team-flyout-caret {
+  flex-shrink: 0;
+  color: var(--fg-subtle);
+  transition: transform 150ms ease;
+}
+.team-flyout-caret.is-open { transform: rotate(90deg); color: var(--accent-brass); }
+
+.team-flyout-wrap { position: relative; }
+
+.team-flyout-menu {
+  position: absolute;
+  left: calc(100% + 8px);
+  bottom: 0;
+  z-index: 60;
+  min-width: 13rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px;
+  border-radius: 12px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  box-shadow: 0 12px 36px -16px var(--scrim);
+  /* A pure opacity fade — NO transform, so the panel never "flies in" from the
+     top-left (the banned animate-in failure mode on floating elements). */
+  animation: team-flyout-fade-in 140ms ease-out;
+}
+@keyframes team-flyout-fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+.team-flyout-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  color: var(--fg-muted);
+  text-decoration: none;
+  font-size: 0.9375rem;
+  white-space: nowrap;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+.team-flyout-item:hover { background: var(--surface-2); color: var(--fg); }
+.team-flyout-item:focus-visible { outline: 2px solid var(--accent-brass); outline-offset: 2px; }
+.team-flyout-item[data-active='true'] {
+  background: var(--accent-soft);
+  color: var(--fg);
+}
+.team-flyout-item[data-active='true'] .team-flyout-item-icon { color: var(--accent-brass); }
+.team-flyout-item-icon { flex-shrink: 0; color: var(--fg-subtle); }
+.team-flyout-item-label { flex: 1 1 auto; min-width: 0; }
+
+/* On mobile the off-canvas drawer is narrow; flying out to the right would land
+   off-screen. Drop the menu to an in-flow expansion ABOVE the trigger instead. */
+@media (max-width: 767px) {
+  .team-flyout-menu {
+    position: static;
+    left: auto;
+    bottom: auto;
+    min-width: 0;
+    margin: 2px 0 4px;
+    box-shadow: none;
+  }
+}
 .menu-icon { flex-shrink: 0; color: var(--fg-subtle); }
 .menu-label { flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .menu-badge {
@@ -1707,6 +1786,46 @@
 .cockpit-content--full {
   max-width: none;
   margin: 0;
+}
+
+/* ---- Full-HEIGHT content wrapper (Felix, v3.1.0 — the "My AI Team" pages) ----
+   The team pages (roster / session-log / workstreams / sops / guidelines) keep the
+   centered reading column (max-width unchanged) BUT must fill the viewport height
+   so their inner panel scrolls instead of leaving a short floating card cropped
+   ~2/3 down the screen (the old `.team-page { height: 74vh }` symptom). We give the
+   content wrapper a definite height equal to the viewport (dvh tracks the mobile
+   URL-bar) and make it a flex column; the team view (.team-solo-view) is the single
+   flex child that fills it, and ITS inner .team-solo-scroll owns the scroll.
+
+   Height = 100dvh minus the wrapper's own top/bottom padding (its only chrome on
+   desktop, where the sidebar is in-flow beside it and there's no topbar). The
+   reading column's max-width + horizontal centering are inherited from
+   .cockpit-content unchanged — only the vertical sizing changes here. */
+.cockpit-content--team {
+  height: 100dvh;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  /* Trim the default bottom padding so the panel reaches near the viewport floor;
+     a calmer 24px gives the contained scrollbar breathing room. */
+  padding-bottom: 24px;
+}
+/* When the sidebar is collapsed the sticky topbar (44px tall: 10px pad + 36px
+   button - overlap; ~56px box) eats from the top — subtract it so the panel still
+   bottoms out at the viewport edge rather than overflowing. */
+.cockpit-shell.sidebar-closed .cockpit-content--team {
+  height: calc(100dvh - 56px);
+}
+/* The member-detail "note page" (RosterView's AgentLargeView) is the ONLY child
+   on the roster route that ISN'T a .team-solo-view: it's a long reading page that
+   must scroll naturally, not be flex-squeezed by the fixed-height team wrapper. As
+   a direct flex child here it gets flex:1 + its own scroll, so the back button +
+   header + body read normally and the page bottoms out at the viewport. */
+.cockpit-content--team > .roster-large {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 /* ---- Board layout (first multi-column surface; opts out of --content-max) -- */

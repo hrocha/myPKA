@@ -49,6 +49,48 @@ export const S = {
     rosterHeading: 'The roster',
   },
 
+  // The "My AI Team" fly-out submenu (Sidebar) + the pages it routes to. The
+  // fly-out opens off the "My AI Team" nav row and offers five destinations.
+  team: {
+    menuLabel: 'My AI Team',
+    menuAria: 'My AI Team — open team menu',
+    flyout: {
+      roster: 'Team (Roster)',
+      sessionLog: 'Session Log',
+      workstreams: 'Workstreams',
+      sops: 'SOPs',
+      guidelines: 'Guidelines',
+    },
+    sessionLog: {
+      title: 'Team Session Log',
+      sub: 'Your team’s working history — newest first.',
+    },
+    workstreams: {
+      title: 'Workstreams',
+      sub: 'Multi-agent orchestrations (WS-NNN).',
+      empty: 'No workstreams yet',
+      emptySub:
+        'Your team’s multi-step orchestrations appear here once they’re authored and the mirror is refreshed.',
+      loadError: 'Could not load the workstreams',
+    },
+    sops: {
+      title: 'SOPs',
+      sub: 'Standard operating procedures (SOP-NNN).',
+      empty: 'No SOPs yet',
+      emptySub:
+        'Your team’s atomic procedures appear here once they’re authored and the mirror is refreshed.',
+      loadError: 'Could not load the SOPs',
+    },
+    guidelines: {
+      title: 'Guidelines',
+      sub: 'Static reference + house rules (GL-NNN).',
+      empty: 'No guidelines yet',
+      emptySub:
+        'Your team’s reference guidelines appear here once they’re authored and the mirror is refreshed.',
+      loadError: 'Could not load the guidelines',
+    },
+  },
+
   recipes: {
     title: 'Recipes',
     emptyLibrary: 'Your cookbook',

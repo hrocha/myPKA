@@ -47,6 +47,7 @@ import { registerLibraryRoutes } from './libraryApi.js';
 import { registerOuterWorldRoutes } from './outerWorldApi.js';
 import { registerAgentRoutes } from './agentApi.js';
 import { registerSessionLogsRoutes } from './sessionLogsApi.js';
+import { registerTeamKnowledgeRoutes } from './teamKnowledgeApi.js';
 import { registerCockpitSettingsRoutes } from './cockpitSettingsRoutes.js';
 import {
   isPinConfigured, resolvePinHash, verifyPin,
@@ -334,6 +335,21 @@ function containedDeliverablesPath(rel) {
   return abs;
 }
 
+// Third jail: Team Knowledge/ (inline preview of the Workstreams / SOPs /
+// Guidelines markdown the "My AI Team" fly-out lists link to). Input is repo-
+// relative ("Team Knowledge/Workstreams/WS-001-….md"). Same containment posture as
+// the Deliverables jail — read-only, path.relative() bounded, inline-MIME gated by
+// the route — and NO other root is reachable: the repo root, PKM/, and any .env
+// file all fall through path.relative() -> 403.
+const TEAM_KNOWLEDGE_DIR = path.resolve(REPO_ROOT, 'Team Knowledge');
+function containedTeamKnowledgePath(rel) {
+  if (!rel || rel.includes('\0')) return null;
+  const abs = path.resolve(REPO_ROOT, rel);
+  const relToTk = path.relative(TEAM_KNOWLEDGE_DIR, abs);
+  if (relToTk === '' || relToTk.startsWith('..') || path.isAbsolute(relToTk)) return null;
+  return abs;
+}
+
 // ---- LLM CLI command (configurable) ------------------------------------------
 // Which CLI the "Discuss with AI" / wire-assistant / quick-launch-terminal buttons
 // launch. Defaults to `claude`. A Codex/Gemini/other user sets COCKPIT_LLM_CMD=codex
@@ -403,13 +419,18 @@ const INLINE_MIME = {
 };
 app.get('/api/cockpit/file', (req, res) => {
   const rel = String(req.query.path || '');
-  // Two jails with DIFFERENT base conventions: Deliverables/ paths are
-  // REPO_ROOT-relative; everything else is PKM/-relative. Route by the path's
-  // own root so neither jail shadows the other.
+  // Three jails with DIFFERENT base conventions, routed by the path's own root so
+  // none shadows the others: Deliverables/ and Team Knowledge/ paths are
+  // REPO_ROOT-relative; everything else is PKM/-relative.
   const norm = rel.replace(/\\/g, '/');
-  const abs = norm === 'Deliverables' || norm.startsWith('Deliverables/')
-    ? containedDeliverablesPath(rel)
-    : containedPkmPath(rel);
+  let abs;
+  if (norm === 'Deliverables' || norm.startsWith('Deliverables/')) {
+    abs = containedDeliverablesPath(rel);
+  } else if (norm === 'Team Knowledge' || norm.startsWith('Team Knowledge/')) {
+    abs = containedTeamKnowledgePath(rel);
+  } else {
+    abs = containedPkmPath(rel);
+  }
   if (!abs) return res.status(403).json({ error: 'forbidden' });
   if (!fs.existsSync(abs) || !fs.statSync(abs).isFile()) {
     return res.status(404).json({ error: 'not found' });
@@ -1120,6 +1141,11 @@ registerAgentRoutes(app, { safe });
 // Team session-log history feed (the LEFT column of the My AI Team page).
 // Read-only; degrades to { available:false } when session_logs is absent.
 registerSessionLogsRoutes(app, { safe });
+// Team-Knowledge list endpoints for the "My AI Team" fly-out (Workstreams / SOPs
+// / Guidelines). Read-only SELECTs over the three mirror tables; degrade to a
+// calm { available:false } envelope when a family's table is absent on a leaner
+// mirror (regen predating these tables). Queries live in teamKnowledgeApi.js.
+registerTeamKnowledgeRoutes(app, { safe });
 // Runtime Hub-module toggles (Settings page). Read always-on; the PUT rides the
 // cockpit's standard local-write guard stack (session/loopback → CSRF → parser),
 // writing ONLY to mypka-cockpit.db's module_prefs table — never mypka.db.

@@ -34,7 +34,15 @@ import { moduleForSlug } from './moduleRegistry';
 export type Route =
   | { name: 'hub' }
   | { name: 'journal' }
+  // "My AI Team" family. The fly-out under the sidebar's "My AI Team" row routes
+  // to one of these full pages. `roster` (the team grid) and `session-log` split
+  // the old combined RosterView into two distinct pages; `workstreams` / `sops` /
+  // `guidelines` list the three Team-Knowledge doc families from mypka.db.
   | { name: 'roster' }
+  | { name: 'session-log' }
+  | { name: 'workstreams' }
+  | { name: 'sops' }
+  | { name: 'guidelines' }
   | { name: 'connections' }
   | { name: 'settings' }
   | { name: 'notes' }
@@ -86,6 +94,10 @@ export function parseHash(hash: string): Route {
   if (parts.length === 0 || parts[0] === 'hub') return { name: 'hub' };
   if (parts[0] === 'journal') return { name: 'journal' };
   if (parts[0] === 'roster') return { name: 'roster' };
+  if (parts[0] === 'session-log') return { name: 'session-log' };
+  if (parts[0] === 'workstreams') return { name: 'workstreams' };
+  if (parts[0] === 'sops') return { name: 'sops' };
+  if (parts[0] === 'guidelines') return { name: 'guidelines' };
   if (parts[0] === 'connections') return { name: 'connections' };
   if (parts[0] === 'settings') return { name: 'settings' };
   // Fleeting Notes + boards MUST be matched BEFORE the module-registry check,
@@ -126,6 +138,10 @@ export function hrefFor(route: Route): string {
     case 'hub': return '#/hub';
     case 'journal': return '#/journal';
     case 'roster': return '#/roster';
+    case 'session-log': return '#/session-log';
+    case 'workstreams': return '#/workstreams';
+    case 'sops': return '#/sops';
+    case 'guidelines': return '#/guidelines';
     case 'connections': return '#/connections';
     case 'settings': return '#/settings';
     case 'notes': return '#/notes';

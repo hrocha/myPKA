@@ -1,20 +1,23 @@
-// RosterView.tsx — the "My AI Team" experience (items 2–4, 2026-06).
+// RosterView.tsx — the "Team (Roster)" page of the "My AI Team" surface.
 //
-// THREE THINGS THIS PAGE DOES (the redesign):
-//   ITEM 4 — Rename. Nav row + PageHeader read "My AI Team" (S.roster.title).
-//   ITEM 3 — Two-column list. A LEFT main column = the team's session-log
-//            history feed (newest-first, reads like the Journal feed: date +
-//            title + summary snippet, unfold in place). A RIGHT side column =
-//            the compact roster list. The two columns scroll INDEPENDENTLY
-//            (each is its own overflow:auto region inside a fixed-height grid);
-//            on mobile the grid collapses to a single stack (roster first, then
-//            the feed) — see team.css `.team-page`.
-//   ITEM 2 — Rich member detail (DATA-CONTRACT §16). Clicking a roster member
-//            opens the member like a NOTE PAGE (the large view): the AGENTS.md
-//            contract body via the sanitized WikiMarkdown, a metadata panel
-//            (role/status/owner/…), a connections canvas at the bottom of the
-//            reading column (the agent's [[wikilinks]] → SOPs/WS/GL/docs/agents),
-//            and the agent's internal journal/insights feed.
+// SPLIT (2026-06, v3.1.0): the old combined page showed the session-log feed AND
+// the roster in one cramped two-column, non-full-height view. It is now split into
+// two distinct full-height pages reachable from the sidebar's "My AI Team" fly-out:
+//   * Session Log  -> SessionLogView (the history feed, its own page)
+//   * Roster       -> THIS view (the team grid + rich member detail)
+// RosterView keeps the roster list + the rich member-detail experience; the feed
+// moved to views/team/SessionLogFeed.tsx (rendered by SessionLogView).
+//
+// WHAT THIS PAGE DOES:
+//   * The compact roster list — one row per member (avatar + name + role + clamped
+//     bio). The whole row is a button → opens the rich member detail. Now a single
+//     full-height column (the page fills the viewport; the list scrolls inside its
+//     own contained region, not the whole window) — see team.css `.team-solo-*`.
+//   * Rich member detail (DATA-CONTRACT §16). Clicking a roster member opens the
+//     member like a NOTE PAGE (the large view): the AGENTS.md contract body via the
+//     sanitized WikiMarkdown, a metadata panel (role/status/owner/…), a connections
+//     canvas at the bottom of the reading column (the agent's [[wikilinks]] →
+//     SOPs/WS/GL/docs/agents), and the agent's internal journal/insights feed.
 //
 // Read-only, loopback/LAN posture like every other view. Avatars load lazily
 // from the Team/-jailed /api/cockpit/avatar route; an absent path OR a load
@@ -26,10 +29,9 @@ import {
 } from 'react';
 import {
   UsersRound, ArrowLeft, ChevronDown, ChevronUp, ArrowUpRight,
-  Info, Share2, Sparkles, ScrollText,
+  Info, Share2, Sparkles,
 } from 'lucide-react';
 import { useFetch } from '../lib/useCockpit';
-import { verifyThenSignalAuthExpired } from '../lib/auth';
 import { S } from '../lib/strings';
 import { navigate } from '../lib/router';
 import { PageHeader } from '../components/PageHeader';
@@ -88,25 +90,6 @@ interface Connection {
   linkType: 'wikilink' | 'embed';
 }
 interface ConnectionsResponse { outbound: Connection[]; inbound: Connection[] }
-
-interface SessionLogEntry {
-  slug: string;
-  title: string;
-  agent: string | null;
-  type: string | null;
-  timestamp: string | null;
-  date: string | null;
-  excerpt: string;
-  body: string;
-  contentLength: number;
-  filePath: string | null;
-}
-interface SessionLogsResponse {
-  available: boolean;
-  entries: SessionLogEntry[];
-  hasMore: boolean;
-  nextBefore: string | null;
-}
 
 // ---------------------------------------------------------------------------
 // Small helpers.
@@ -171,18 +154,6 @@ function dayLabel(date: string | null): string {
   }
 }
 
-// Same-origin GET with the useCockpit 401 discipline (a spurious 401 re-verifies
-// the session instead of tearing the app down; this read surfaces inline).
-async function fetchJson<T>(url: string): Promise<T> {
-  const r = await fetch(url, { credentials: 'same-origin' });
-  if (r.status === 401) {
-    void verifyThenSignalAuthExpired();
-    throw new Error('Session check failed — please retry.');
-  }
-  if (!r.ok) throw new Error(`Server responded ${r.status}`);
-  return r.json() as Promise<T>;
-}
-
 // ---------------------------------------------------------------------------
 // Avatar — degrades to initials on a NULL path or an image load error.
 // ---------------------------------------------------------------------------
@@ -216,159 +187,10 @@ function Avatar({
 }
 
 // ===========================================================================
-// LEFT COLUMN — the team session-log history feed (ITEM 3).
-// Reads exactly like the Journal feed: date + title + snippet, click/unfold to
-// read the full log. Its own scroll region (team.css .team-feed-scroll). Empty
-// state when the table is absent or holds no logs.
+// THE SESSION-LOG FEED + CARD moved to views/team/SessionLogFeed.tsx (the
+// 2026-06 / v3.1.0 split). SessionLogView renders them on their own full-height
+// page; this roster page no longer embeds the feed.
 // ===========================================================================
-const FEED_PAGE = 20;
-
-function SessionLogFeed() {
-  const [entries, setEntries] = useState<SessionLogEntry[]>([]);
-  const [available, setAvailable] = useState(true);
-  const [nextBefore, setNextBefore] = useState<string | null>(null);
-  const [hasMore, setHasMore] = useState(true);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [initialised, setInitialised] = useState(false);
-
-  const sentinelRef = useRef<HTMLDivElement | null>(null);
-  const stateRef = useRef({ loading: false, hasMore: true, nextBefore: null as string | null });
-  stateRef.current = { loading, hasMore, nextBefore };
-
-  const loadPage = useCallback(async (before: string | null) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const qs = new URLSearchParams({ limit: String(FEED_PAGE) });
-      if (before) qs.set('before', before);
-      const page = await fetchJson<SessionLogsResponse>(`/api/cockpit/session-logs?${qs.toString()}`);
-      setAvailable(page.available);
-      setEntries((prev) => {
-        const seen = new Set(prev.map((e) => e.slug));
-        return [...prev, ...page.entries.filter((e) => !seen.has(e.slug))];
-      });
-      setHasMore(page.hasMore);
-      setNextBefore(page.nextBefore);
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setLoading(false);
-      setInitialised(true);
-    }
-  }, []);
-
-  useEffect(() => { void loadPage(null); }, [loadPage]);
-
-  // Backwards infinite scroll: the bottom sentinel pulls the next page. The
-  // observer root is the feed's own scroll container (closest scrollable
-  // ancestor), so it fires on the column's scroll, not the document's.
-  useEffect(() => {
-    const el = sentinelRef.current;
-    if (!el) return;
-    const io = new IntersectionObserver(
-      (obs) => {
-        const s = stateRef.current;
-        if (obs.some((o) => o.isIntersecting) && !s.loading && s.hasMore && s.nextBefore) {
-          void loadPage(s.nextBefore);
-        }
-      },
-      { rootMargin: '320px 0px' },
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, [loadPage, initialised]);
-
-  if (!initialised && loading) {
-    return (
-      <div className="list-skeleton" aria-busy="true"><div className="skeleton-block" /></div>
-    );
-  }
-
-  // Empty / unavailable — a calm, honest state (no logs yet, or no table).
-  if (initialised && (!available || entries.length === 0) && !error) {
-    return (
-      <div className="team-feed-empty">
-        <span className="library-empty-mark" aria-hidden="true">
-          <ScrollText size={26} strokeWidth={1.5} />
-        </span>
-        <p className="library-empty-title">{S.roster.feedEmptyTitle}</p>
-        <p className="library-empty-sub">{S.roster.feedEmptySub}</p>
-      </div>
-    );
-  }
-
-  if (!initialised && error) {
-    return <div role="alert" className="view-error">{S.roster.feedLoadError}: {error}</div>;
-  }
-
-  return (
-    <ol className="team-feed-list">
-      {entries.map((entry) => (
-        <li key={entry.slug} className="team-feed-li">
-          <SessionLogCard entry={entry} />
-        </li>
-      ))}
-      <li className="team-feed-foot" aria-hidden={!loading && !error}>
-        {initialised && loading && (
-          <div className="list-skeleton" aria-busy="true"><div className="skeleton-block" /></div>
-        )}
-        {initialised && error && !loading && (
-          <p role="alert" className="jt-foot-error">
-            {S.roster.feedLoadError}: {error}{' '}
-            <button type="button" className="jt-retry" onClick={() => void loadPage(nextBefore)}>
-              Retry
-            </button>
-          </p>
-        )}
-        {!hasMore && entries.length > 0 && (
-          <p className="team-feed-origin">the beginning of your team’s log</p>
-        )}
-        <div ref={sentinelRef} className="jt-sentinel" aria-hidden="true" />
-      </li>
-    </ol>
-  );
-}
-
-// One session-log entry: date + title + snippet, unfolds in place to the full
-// body (WikiMarkdown). Mirrors the Journal feed's TimelineEntry reading.
-function SessionLogCard({ entry }: { entry: SessionLogEntry }) {
-  const [open, setOpen] = useState(false);
-  const bodyId = `team-log-${entry.slug}`;
-  return (
-    <article className="team-log">
-      <div className="team-log-meta">
-        {entry.date && <time className="team-log-date" dateTime={entry.date}>{dayLabel(entry.date)}</time>}
-        <span className="team-log-tags">
-          {entry.agent && <span className="team-log-agent">{entry.agent}</span>}
-          {entry.type && <span className="team-log-type">{entry.type}</span>}
-        </span>
-      </div>
-      <h3 className="team-log-title">{entry.title}</h3>
-      {!open && entry.excerpt && <p className="team-log-excerpt">{entry.excerpt}</p>}
-      <div className="collapse-rows" data-open={open} id={bodyId}>
-        <div className="collapse-rows-inner">
-          <div className="team-log-full">
-            {open && <WikiMarkdown body={entry.body} />}
-          </div>
-        </div>
-      </div>
-      {(entry.body || entry.excerpt) && (
-        <button
-          type="button"
-          className="team-log-unfold"
-          onClick={() => setOpen((v) => !v)}
-          aria-expanded={open}
-          aria-controls={bodyId}
-        >
-          {open
-            ? <><ChevronUp size={14} strokeWidth={1.5} aria-hidden="true" /> Fold</>
-            : <><ChevronDown size={14} strokeWidth={1.5} aria-hidden="true" /> Unfold</>}
-        </button>
-      )}
-    </article>
-  );
-}
 
 // ===========================================================================
 // RIGHT COLUMN — the compact roster list (ITEM 3).
@@ -762,7 +584,6 @@ export function RosterView() {
   const { data, loading, error } = useFetch<AgentsResponse>('/api/cockpit/agents');
   const topRef = useRef<HTMLDivElement | null>(null);
   const [large, setLarge] = useState<Agent | null>(null);
-  const feedHeadingId = useId();
   const rosterHeadingId = useId();
   useEffect(() => { if (!large) topRef.current?.scrollIntoView({ block: 'start' }); }, [large]);
 
@@ -801,34 +622,24 @@ export function RosterView() {
   const openMember = (a: Agent) => setLarge(a);
 
   return (
-    <section ref={topRef} className="roster-view team-page-view animate-fade-rise">
+    <section ref={topRef} className="roster-view team-page-view team-solo-view animate-fade-rise">
       <PageHeader title={S.roster.title} icon={UsersRound} subtitle={S.roster.countSub(agents.length)} />
 
-      {/* Two independently-scrollable columns; collapses to a stack on mobile
-          (roster first, then the feed) — team.css `.team-page`. */}
-      <div className="team-page">
-        <section className="team-feed-col" aria-labelledby={feedHeadingId}>
-          <h2 id={feedHeadingId} className="team-col-head">
-            <ScrollText size={16} strokeWidth={1.5} aria-hidden="true" /> {S.roster.feedTitle}
-          </h2>
-          <div className="team-feed-scroll">
-            <SessionLogFeed />
-          </div>
-        </section>
-
-        <aside className="team-roster-col" aria-labelledby={rosterHeadingId}>
-          <h2 id={rosterHeadingId} className="team-col-head">
-            <UsersRound size={16} strokeWidth={1.5} aria-hidden="true" /> {S.roster.rosterHeading}
-          </h2>
-          <div className="team-roster-scroll">
-            <ul className="roster-rows">
-              {ordered.map((a) => (
-                <RosterRow key={a.slug} agent={a} onOpen={openMember} />
-              ))}
-            </ul>
-          </div>
-        </aside>
-      </div>
+      {/* A single full-height column: the roster list scrolls inside its own
+          contained region (.team-solo-scroll) so the page fills the viewport and
+          the window itself never scrolls a short floating card — team.css. */}
+      <section className="team-solo-col" aria-labelledby={rosterHeadingId}>
+        <h2 id={rosterHeadingId} className="team-col-head">
+          <UsersRound size={16} strokeWidth={1.5} aria-hidden="true" /> {S.roster.rosterHeading}
+        </h2>
+        <div className="team-solo-scroll">
+          <ul className="roster-rows">
+            {ordered.map((a) => (
+              <RosterRow key={a.slug} agent={a} onOpen={openMember} />
+            ))}
+          </ul>
+        </div>
+      </section>
     </section>
   );
 }

@@ -2,6 +2,51 @@
 
 All notable changes to the myPKA scaffold are tracked here. Versions follow semver: MAJOR for breaking structural changes, MINOR for additions, PATCH for fixes.
 
+## [3.1.0] - 2026-06-22
+
+**The Cockpit gets a "My AI Team" section: browse your team, session log, and governance docs (Workstreams / SOPs / Guidelines) right inside the local viewer.** This is a Cockpit-feature release — the base scaffold structure is unchanged. It also folds in the v3.0.1 slug fix. New features ship as **source**; the Cockpit rebuilds its UI bundle (`web/dist`) on first run, so an existing install picks the features up by pulling the new files, regenerating the mirror, and rebuilding/restarting (steps below).
+
+### Added
+
+- **Cockpit "My AI Team" fly-out menu.** A new sidebar fly-out exposes five team destinations: **Team** (the roster), **Session Log**, **Workstreams**, **SOPs**, and **Guidelines**. Your specialists and your operating knowledge are now first-class navigation in the Cockpit, not invisible to the viewer.
+- **Workstreams, SOPs, and Guidelines are now indexed in the `mypka.db` mirror.** `Expansions/mypka-cockpit/scripts/regen-mypka-db.py` gains new tables for the three governance-doc families (`workstreams`, `sops`, `guidelines`), so they are queryable in the mirror and browsable in the Cockpit. **You must re-run the regen for these to populate** (command below).
+- **New read-only Cockpit endpoint `GET /api/cockpit/team-knowledge/:family`** (`:family` ∈ `workstreams` | `sops` | `guidelines`), served by the new `Expansions/mypka-cockpit/server/teamKnowledgeApi.js`. Read-only; serves the indexed governance docs to the new list views.
+
+### Changed
+
+- **Session Log and Roster are now separate, full-height pages.** They were previously crammed into a single cramped view; each is now its own route. Team pages use the full viewport height, fixing the content crop.
+
+### Fixed
+
+- **Includes the v3.0.1 fix:** Cockpit Fleeting-Note and Journal capture no longer fails with `title produced an empty slug` for titles made entirely of non-Latin script (Korean / Chinese / Japanese / Cyrillic / Greek / Arabic / Hebrew / Thai), emoji, or punctuation. The capture now falls back to a safe generated slug (`fleeting-<timestamp>` / `<date>-entry`) and preserves the original title in the note. All security guards intact. (Full detail under `[3.0.1]` below.)
+
+### Files of note (so an existing install's LLM can pull just this)
+
+This is a **Cockpit-only** change set — no base-scaffold files change. The new/changed Cockpit files are:
+
+- **New UI views** — `Expansions/mypka-cockpit/web/src/views/SessionLogView.tsx`, `web/src/views/TeamKnowledgeListView.tsx`, `web/src/views/team/SessionLogFeed.tsx`, plus updated `web/src/views/RosterView.tsx` and `web/src/views/FileView.tsx`.
+- **Sidebar fly-out + routing + strings** — `web/src/components/Sidebar.tsx`, `web/src/lib/router.ts`, `web/src/App.tsx`, `web/src/lib/strings.ts`, `web/src/cockpit.css`, `web/src/views/team.css`.
+- **New server endpoint** — `Expansions/mypka-cockpit/server/teamKnowledgeApi.js` (and its wiring in `server/server.js`).
+- **Mirror regen with the new tables** — `Expansions/mypka-cockpit/scripts/regen-mypka-db.py` (plus the contract docs `docs/db-contract.md` and `sqlite-extension/DATA-CONTRACT.md`).
+
+**To pull this into an existing install (no full re-download needed):**
+
+1. Replace/add the Cockpit files listed above with their v3.1.0 versions.
+2. **Re-run the mirror regen** to create + populate the new governance tables:
+   `python3 "Expansions/mypka-cockpit/scripts/regen-mypka-db.py"`
+3. **Rebuild and restart the Cockpit** so the new UI and the new server route load:
+   `cd Expansions/mypka-cockpit && npm run serve` (this runs `npm run build` → rebuilds `web/dist` → starts the server).
+
+Note: `web/dist` and `mypka.db` are intentionally **not** shipped in the release archive (both are gitignored, regenerable). The release ships UI **source**; the Cockpit builds `web/dist` on first run and regenerates `mypka.db` from your real scaffold. This is why steps 2–3 are required after pulling.
+
+### Version files
+
+- `VERSION` → `3.1.0` (was `3.0.1`)
+- `.scaffold-version` → `3.1.0` (was `3.0.1`)
+- `Expansions/mypka-cockpit/expansion.yaml` → `1.1.0` (was `1.0.1`)
+- Cockpit `package.json` / `web/package.json` / `package-lock.json` → `1.1.0` (mirror `expansion.yaml`; reconciled — they had drifted at `1.0.0`)
+- Cockpit `CHANGELOG.md` adds `[1.1.0]` and renumbers the prior slug-fix entry from the mislabeled `[3.0.1]` to `[1.0.1]` (the Cockpit CHANGELOG tracks `expansion.yaml`, not the scaffold version)
+
 ## [3.0.1] - 2026-06-22
 
 **Hotfix: the Cockpit can now create Fleeting Notes and Journal entries for non-Latin / emoji / punctuation-only titles.** Cockpit-only fix — no scaffold-wide structural change. Two server files change; nothing else in the scaffold is touched.
