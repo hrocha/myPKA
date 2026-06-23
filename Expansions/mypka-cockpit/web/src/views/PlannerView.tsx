@@ -19,10 +19,13 @@
 //   writes: POST /api/planner/assign | reorder · DELETE assign · PUT settings
 //           (behind PLAN_WRITE_ENABLED → 503 disabled handled gracefully)
 //
-// DROP-INDEX → before/after ids: a task dropped into a lane resolves to an insertion
-// index among that lane's ordered TASK placements; we read the neighbor row ids
-// (above = before_id, below = after_id, either may be null) and send THOSE — the
-// server computes position. We NEVER send a numeric position.
+// UNIFIED-SPACE DROP (2026-06-23): a lane is ONE comparable position space spanning
+// events (deterministic, time-derived, read-only anchors — never plan rows) AND tasks
+// (stored REAL position in the same scale). A task dropped into a lane resolves to an
+// insertion index in the UNIFIED ordered list; we compute the target numeric position
+// (midpoint of the unified neighbours) and send THAT. This is what lets a task sit
+// ABOVE an event and persist there — the old task-only before/after id scheme could
+// not name an event as a neighbour, so a task could never order before an event.
 //
 // CALM NOT-CONNECTED POSTURE (preserved): when calendar isn't connected the board
 // degrades to tasks-only (lanes still work); when a task source isn't connected the
@@ -46,14 +49,15 @@ import type {
 } from '../lib/plannerTypes';
 import { taskKey, eventKey, parseTaskKey, isEventKey } from '../lib/plannerTypes';
 import {
-  planReducer, emptyPlanState, laneItems, findPlacement, neighborIdsAt,
-  optimisticPosition, type PlanItem,
+  planReducer, emptyPlanState, laneItems, findPlacement, unifiedPositionAt,
+  type PlanItem,
 } from '../lib/plannerReducer';
 import {
   mondayOf, todayInTz, weekDays, weekdayOf, weekDaysLabelFor, WEEKDAY_FULL, WEEKDAY_LABELS,
   isWorkday, addDays, currentHalf, monthDayLabel, dayRelation,
   hoursForWeekday, tzMinutesOfDay, hhmmToMinutes,
   remainingWorkMinutes, timerState, formatRemaining,
+  eventPosition, EVENT_FLOOR,
 } from '../lib/plannerLogic';
 import { usePlannerSettings } from '../lib/usePlannerSettings';
 import { usePersistedBool, useGroupCollapsed, SIDEBAR_COLLAPSED_KEY, SIDEBAR_GROUPED_KEY, AM_COLLAPSED_KEY, FOCUS_MODE_KEY } from '../lib/useSidebarPrefs';
@@ -291,12 +295,32 @@ export function PlannerView() {
       .filter((e) => e.day === day && (e.allDay ? half === 'AM' : e.half === half))
       .sort((a, b) => (a.allDay === b.allDay ? a.start.localeCompare(b.start) : (a.allDay ? -1 : 1)));
 
-  // The ordered sortable id list for one lane: meeting anchors first (they hold time
-  // slots), then placed task cards in plan order. Tasks can be dropped between them.
+  // The UNIFIED ordered list for one lane (2026-06-23): events and tasks merged into
+  // ONE position-sorted sequence. Each entry carries its sortId, its unified-space
+  // position (event = time-derived via eventPosition; task = stored `position`), and
+  // whether it is an event. This is THE single ordering authority — laneSortIds, the
+  // render merge, and resolveDrop all derive from it, so a task ordered ABOVE an event
+  // shows, persists, and re-reads identically. Stable sort by position, then events
+  // before tasks on an exact tie (an all-day event at -1 always leads).
+  function laneUnified(
+    weekday: Weekday, half: Half, day: string,
+  ): { sortId: string; position: number; isEvent: boolean }[] {
+    const entries = [
+      ...meetingsFor(day, half).map((e) => ({
+        sortId: eventKey(e.uid), position: eventPosition(e, tz), isEvent: true,
+      })),
+      ...laneItems(plan, weekday, half).map((it) => ({
+        sortId: taskKey(it.source, it.externalTaskId), position: it.position, isEvent: false,
+      })),
+    ];
+    return entries.sort((a, b) =>
+      a.position - b.position || (a.isEvent === b.isEvent ? 0 : a.isEvent ? -1 : 1));
+  }
+
+  // The ordered sortable id list for one lane (events + tasks interleaved by the
+  // unified position space). dnd-kit's SortableContext consumes this verbatim.
   function laneSortIds(weekday: Weekday, half: Half, day: string): string[] {
-    const meetingIds = meetingsFor(day, half).map((e) => eventKey(e.uid));
-    const taskIds = laneItems(plan, weekday, half).map((it) => taskKey(it.source, it.externalTaskId));
-    return [...meetingIds, ...taskIds];
+    return laneUnified(weekday, half, day).map((x) => x.sortId);
   }
 
   // ---- DnD sensors ----------------------------------------------------------
@@ -322,25 +346,25 @@ export function PlannerView() {
   };
 
   // ---- resolveDrop: THE single source of truth for "where will this land" ----
-  // Both onDragEnd (persistence: beforeId/afterId) AND positionPhrase/the announcer
-  // (spoken ordinal + neighbour titles) call this, so the SPOKEN slot can never
-  // disagree with the PERSISTED slot (H1). It derives ONE full-list insertion index
-  // from the over-id, then maps it to the task-only index used for neighbour ids.
+  // Both onDragEnd (persistence: the unified `position`) AND positionPhrase/the
+  // announcer (spoken ordinal + neighbour titles) call this, so the SPOKEN slot can
+  // never disagree with the PERSISTED slot (H1). It derives ONE insertion index in
+  // the UNIFIED lane list (events + tasks), then turns that into a single numeric
+  // `position` in the unified space — the only thing persisted now.
   //
-  // insertFull = position in the FULL ordered list (meetings + tasks) where the card
-  //              lands (drives the spoken ordinal + neighbour titles the user hears).
-  // taskIndex  = position among TASK placements only (drives beforeId/afterId, the
-  //              only thing persisted — meetings are anchors, not plan rows).
-  // The two are kept consistent: taskIndex counts the task rows at-or-before
-  // insertFull, so the brass slot the user SEES/HEARS is the slot that PERSISTS.
+  // insertFull = the slot in the unified ordered list (events + tasks) where the card
+  //              lands (drives the spoken ordinal + neighbour titles AND the drop-line).
+  // position   = the unified-space target the client sends to the server. It is the
+  //              midpoint of the unified neighbour positions straddling insertFull, so
+  //              a task dropped ABOVE an event lands BELOW that event's time-position
+  //              and persists there (the old task-only collapse is GONE — that was the
+  //              bug). insertFull and position describe the SAME slot.
   function resolveDrop(
     activeKey: UniqueIdentifier, overId: UniqueIdentifier | null,
   ): {
     lane: { weekday: Weekday; half: Half; day: string } | null;
     insertFull: number;
-    taskIndex: number;
-    beforeId: number | null;
-    afterId: number | null;
+    position: number;
     beforeTitle: string | null;
     afterTitle: string | null;
     dayName: string;
@@ -348,37 +372,54 @@ export function PlannerView() {
   } | null {
     if (!overId) return null;
     const lane = resolveLane(String(overId));
-    if (!lane) return { lane: null, insertFull: 0, taskIndex: 0, beforeId: null, afterId: null, beforeTitle: null, afterTitle: null, dayName: '', halfWord: '' };
+    if (!lane) return { lane: null, insertFull: 0, position: 0, beforeTitle: null, afterTitle: null, dayName: '', halfWord: '' };
     const { weekday, half, day } = lane;
     const activeStr = String(activeKey);
 
-    // The full ordered id list (meeting anchors + task cards), self excluded.
-    const fullIds = laneSortIds(weekday, half, day).filter((x) => x !== activeStr);
+    // The FULL ordered lane (events@time-pos + tasks@stored-pos), self INCLUDED —
+    // needed to know whether the active card is being dragged UP or DOWN relative to
+    // the over-card (the direction dnd-kit's sortable semantics require).
+    const fullWithSelf = laneUnified(weekday, half, day);
+    const activeOrigIdx = fullWithSelf.findIndex((x) => x.sortId === activeStr);
+    // The unified ordered lane, self excluded — this is the neighbour list the target
+    // position is computed against (the dragged card is in flight, not a neighbour).
+    const unified = fullWithSelf.filter((x) => x.sortId !== activeStr);
+    const fullIds = unified.map((x) => x.sortId);
     const overKey = String(overId);
-    // Over a card → insert AT that card's index; over the bare lane → append.
-    const overIdx = isEventKey(overKey) || taskByKey.has(overKey) ? fullIds.indexOf(overKey) : -1;
-    const insertFull = overIdx < 0 ? fullIds.length : overIdx;
+    const overIsCard = isEventKey(overKey) || taskByKey.has(overKey);
+    // Over a card → resolve the insertion slot WITH DRAG DIRECTION (dnd-kit sortable
+    // semantics). overOrigIdx is the over-card's slot in the FULL list (self included).
+    //   - dragging DOWN  (active above over: activeOrigIdx in [0, overOrigIdx)) → land
+    //     AFTER the over-card. In the self-excluded list its index is overOrigIdx-1, so
+    //     "after" = (overOrigIdx-1)+1 = overOrigIdx.
+    //   - dragging UP / cross-lane / new card (no self below the over-card) → land
+    //     BEFORE the over-card, i.e. at its self-excluded index = indexOf(overKey).
+    // Without the direction term a DOWNWARD same-lane drag always inserted BEFORE the
+    // lower sibling — but the card already sat above it, so the position never changed
+    // and a reorder among tasks was impossible (Tom's "within the column doesn't work").
+    let insertFull: number;
+    if (!overIsCard) {
+      insertFull = fullIds.length; // over the bare lane → append
+    } else {
+      const overOrigIdx = fullWithSelf.findIndex((x) => x.sortId === overKey);
+      const draggingDown = activeOrigIdx >= 0 && activeOrigIdx < overOrigIdx;
+      insertFull = draggingDown ? overOrigIdx : fullIds.indexOf(overKey);
+    }
 
-    // Task-only index = how many TASK rows sit strictly before insertFull. This is
-    // the SAME insertion point, re-expressed against the task-only lane for ids.
-    const placedTasks = laneItems(plan, weekday, half);
-    const selfId = (() => {
-      const { source, id } = parseTaskKey(activeStr);
-      return findPlacement(plan, source, id)?.id ?? null;
-    })();
-    const tasksBefore = fullIds.slice(0, insertFull).filter((x) => !isEventKey(x)).length;
-    const others = selfId == null ? placedTasks : placedTasks.filter((t) => t.id !== selfId);
-    const taskIndex = Math.min(tasksBefore, others.length);
-    const { beforeId, afterId } = neighborIdsAt(placedTasks, taskIndex, selfId);
+    // The unified-space target position = midpoint of the neighbours around insertFull
+    // (or +/-1 at an edge). This is what makes "above an event" representable: if the
+    // neighbour BELOW is an event at 600 and there is no neighbour above, position is
+    // 599 (event - 1), which stores the task above that event.
+    const position = unifiedPositionAt(unified.map((x) => x.position), insertFull);
 
-    // Neighbour TITLES for the spoken phrase come from the FULL list around
+    // Neighbour TITLES for the spoken phrase come from the unified list around
     // insertFull (so "before Standup" can name a meeting), keeping speech rich while
-    // the ordinal below reflects the exact same insertion point.
+    // the ordinal reflects the exact same insertion point.
     const beforeTitle = insertFull > 0 ? titleOf(fullIds[insertFull - 1]) : null;
     const afterTitle = insertFull < fullIds.length ? titleOf(fullIds[insertFull]) : null;
 
     return {
-      lane, insertFull, taskIndex, beforeId, afterId, beforeTitle, afterTitle,
+      lane, insertFull, position, beforeTitle, afterTitle,
       dayName: WEEKDAY_FULL[weekday], halfWord: half === 'AM' ? 'morning' : 'afternoon',
     };
   }
@@ -485,8 +526,7 @@ export function PlannerView() {
       return;
     }
 
-    const { weekday, half, day } = r.lane;
-    const placedTasks = laneItems(plan, weekday, half);
+    const { weekday, half } = r.lane;
     const self = findPlacement(plan, source, taskId);
     const selfId = self?.id ?? null;
     // BUG 5: a placed card is moving to a DIFFERENT lane when its current placement's
@@ -494,23 +534,24 @@ export function PlannerView() {
     // position within the row's existing cell — it cannot re-lane — so a cross-lane move
     // routed through /reorder silently kept the card in its old box (snap-back on reload).
     // We pass the laneChanged flag so placeTask uses /assign (an UPSERT that moves lane +
-    // sets position from neighbours) for cross-lane moves, /reorder only for same-lane.
+    // sets the unified position) for cross-lane moves, /reorder only for same-lane.
     const laneChanged = self != null && (self.weekday !== weekday || self.half !== half);
 
-    placeTask({ source, taskId, weekday, half, day, taskIndex: r.taskIndex, selfId, laneChanged, placedTasks });
+    // r.position is the UNIFIED-space target (events + tasks), already self-excluded —
+    // the same slot the announcer/drop-line showed. No task-only collapse anymore.
+    placeTask({ source, taskId, weekday, half, position: r.position, selfId, laneChanged });
   }
 
   // Optimistic place + persist. New card → assign. Existing card: same lane → reorder
-  // (position-only); DIFFERENT lane → assign (the UPSERT re-lanes + repositions). BUG 5:
-  // routing a cross-lane move through reorder was the snap-back — reorder never re-lanes.
+  // (position-only); DIFFERENT lane → assign (the UPSERT re-lanes + repositions). The
+  // `position` is the UNIFIED-space target computed in resolveDrop — sent verbatim to
+  // the server AND used for the optimistic reducer order, so the two never disagree.
   function placeTask({
-    source, taskId, weekday, half, taskIndex, selfId, laneChanged, placedTasks,
+    source, taskId, weekday, half, position, selfId, laneChanged,
   }: {
-    source: string; taskId: string; weekday: Weekday; half: Half; day: string;
-    taskIndex: number; selfId: number | null; laneChanged?: boolean; placedTasks: PlanItem[];
+    source: string; taskId: string; weekday: Weekday; half: Half;
+    position: number; selfId: number | null; laneChanged?: boolean;
   }) {
-    const { beforeId, afterId } = neighborIdsAt(placedTasks, taskIndex, selfId);
-    const position = optimisticPosition(placedTasks, beforeId, afterId);
     const existing = selfId != null;
     // Reorder ONLY for an already-persisted row (positive id) staying in the SAME lane.
     // A negative (optimistic-only) id, or any lane change, must go through assign.
@@ -519,13 +560,14 @@ export function PlannerView() {
     // 1) OPTIMISTIC reducer update (Vivi's drop-settle plays on the DragOverlay).
     dispatch({ type: 'place', source, externalTaskId: taskId, weekday, half, position });
 
-    // 2) PERSIST.
+    // 2) PERSIST — send the unified-space position; the server honors it (or
+    // renormalizes the cell on a rare collision and re-derives the same rank).
     void (async () => {
       const outcome = useReorder
-        ? await reorderPlacement({ id: selfId!, before_id: beforeId, after_id: afterId })
+        ? await reorderPlacement({ id: selfId!, position })
         : await assignPlacement({
             week_start: weekStart, weekday, half, source, external_task_id: taskId,
-            before_id: beforeId, after_id: afterId,
+            position,
           });
       handleOutcome(outcome, source, taskId, () => {
         // revert: remove the optimistic placement (or re-hydrate from server).
@@ -609,17 +651,24 @@ export function PlannerView() {
     })();
   }
 
-  // Move a placed task to the next visible day, same half (the "shed" gesture).
+  // Move a placed task to the next visible day, same half (the "shed" gesture). It
+  // lands at the TAIL of the next day's lane in the unified space — below every event
+  // and task there. Tail position = max unified position + 1 (or EVENT_FLOOR + 1 when
+  // the lane is empty), so a shed task never jumps above the day's meetings.
   function moveToNextDay(it: PlanItem) {
     const curDay = days[it.weekday];
     const nextDay = addDays(curDay, 1);
     const nextWd = weekdayOf(nextDay);
-    const placedTasks = laneItems(plan, nextWd, it.half);
+    const unified = laneUnified(nextWd, it.half, nextDay)
+      .filter((x) => x.sortId !== taskKey(it.source, it.externalTaskId));
+    const tailPos = unified.length
+      ? Math.max(...unified.map((x) => x.position)) + 1
+      : EVENT_FLOOR + 1;
     placeTask({
       source: it.source, taskId: it.externalTaskId, weekday: nextWd, half: it.half,
-      day: nextDay, taskIndex: placedTasks.length, selfId: it.id,
+      position: tailPos, selfId: it.id,
       // Moving to the next day is always a lane change → assign (re-lanes), never reorder.
-      laneChanged: true, placedTasks,
+      laneChanged: true,
     });
   }
 
@@ -918,24 +967,39 @@ export function PlannerView() {
               const renderLane = (half: Half) => {
                 // Iris 20 §3 — focus-mode filter: in focus the board lanes show ONLY
                 // highlights (placed weekly goals) + meetings/events; non-highlight task
-                // cards are hidden. We filter the lane's task list AND its sortIds together
-                // so dnd-kit's sortable list never references a card that isn't rendered.
-                // Meetings are unaffected (they stay anchors in the sort list). Calm — no
-                // jarring reflow: the same easeFollow/easeCollapse motion plays as cards
-                // leave. (The pinned Weekly Goals sidebar stays visible regardless.)
+                // cards are hidden. We filter the lane's task list so dnd-kit's sortable
+                // list never references a card that isn't rendered. Meetings are unaffected
+                // (they stay anchors). Calm — no jarring reflow.
                 const allLaneTasks = laneItems(plan, wd, half);
                 const laneTasks = focusMode
                   ? allLaneTasks.filter((it) => isWeeklyGoalKey(taskKey(it.source, it.externalTaskId)))
                   : allLaneTasks;
-                const meetingIds = meetingsFor(day, half).map((e) => eventKey(e.uid));
-                const taskIds = laneTasks.map((it) => taskKey(it.source, it.externalTaskId));
-                const laneSort = [...meetingIds, ...taskIds];
+                const laneMeetings = meetingsFor(day, half);
+
+                // UNIFIED render order (2026-06-23): merge events + tasks into ONE
+                // position-sorted sequence — NOT "meetings first, then tasks". An event's
+                // unified position is time-derived (eventPosition); a task's is its stored
+                // `position`. The rendered list, its sortId list (dnd-kit), and the
+                // drop-line index all come from this ONE merge, so a task ordered ABOVE an
+                // event renders, drags, and persists at exactly that slot. Tie-break: an
+                // event leads a task at an identical position (all-day events sort first).
+                const renderItems: LaneRow[] = [
+                  ...laneMeetings.map((e) => ({
+                    kind: 'event' as const, sortId: eventKey(e.uid), position: eventPosition(e, tz), event: e,
+                  })),
+                  ...laneTasks.map((it) => ({
+                    kind: 'task' as const, sortId: taskKey(it.source, it.externalTaskId), position: it.position, task: it,
+                  })),
+                ].sort((a, b) =>
+                  a.position - b.position
+                  || (a.kind === b.kind ? 0 : a.kind === 'event' ? -1 : 1));
+                const laneSort = renderItems.map((r) => r.sortId);
                 return (
                   <LaneBody
                     day={day}
                     weekday={wd}
                     half={half}
-                    meetings={meetingsFor(day, half)}
+                    rows={renderItems}
                     tasks={laneTasks}
                     taskByKey={taskByKey}
                     tz={tz}
@@ -1509,14 +1573,22 @@ function formatSplitTime(raw: string): string {
   return `${m[1].padStart(2, '0')}:${m[2]}`;
 }
 
+// One row in a lane's UNIFIED render order (events + tasks merged by position). The
+// kind discriminates the node builder; `position` is the unified-space sort key.
+type LaneRow =
+  | { kind: 'event'; sortId: string; position: number; event: NormalizedEvent }
+  | { kind: 'task'; sortId: string; position: number; task: PlanItem };
+
 // ---- lane body: builds the meeting anchors + task cards for HalfLane ---------
 function LaneBody({
-  day, weekday, half, meetings, tasks, taskByKey, tz, overLane, sortIds, dropLineIndex, calendarStatus, labelForSource, onMoveNext, onOpenDetail, isWeeklyGoalKey, onToggleHighlight, onToggleComplete,
+  day, weekday, half, rows, tasks, taskByKey, tz, overLane, sortIds, dropLineIndex, calendarStatus, labelForSource, onMoveNext, onOpenDetail, isWeeklyGoalKey, onToggleHighlight, onToggleComplete,
 }: {
   day: string;
   weekday: Weekday;
   half: Half;
-  meetings: NormalizedEvent[];
+  // UNIFIED render order: events + tasks already merged + position-sorted upstream.
+  rows: LaneRow[];
+  // The lane's task placements (still passed for the empty-state check below).
   tasks: PlanItem[];
   taskByKey: Map<string, NormalizedTask>;
   tz: string;
@@ -1536,22 +1608,26 @@ function LaneBody({
   // completion POST). Source-done cards disable the check inside PlanCard (read-only).
   onToggleComplete: (it: PlanItem) => void;
 }) {
-  // Build the render items in plan order: meetings first (anchors), then tasks.
-  const items: LaneRenderItem[] = [];
-  for (const e of meetings) {
-    items.push({
-      sortId: eventKey(e.uid),
-      node: (
-        <MeetingAnchor
-          id={eventKey(e.uid)}
-          title={e.title}
-          meta={eventTimeLabel(e, tz)}
-          onOpenDetail={() => onOpenDetail({ kind: 'event', event: e, tz })}
-        />
-      ),
-    });
-  }
-  for (const it of tasks) {
+  // Build the render items in the UNIFIED order handed down (events + tasks interleaved
+  // by position) — NOT meetings-first. Each row becomes a MeetingAnchor or a
+  // SortableTaskCard; the sortId order matches `sortIds` exactly (both come from the
+  // same upstream merge), so dnd-kit's sortable list and the DOM agree.
+  const items: LaneRenderItem[] = rows.map((row) => {
+    if (row.kind === 'event') {
+      const e = row.event;
+      return {
+        sortId: row.sortId,
+        node: (
+          <MeetingAnchor
+            id={eventKey(e.uid)}
+            title={e.title}
+            meta={eventTimeLabel(e, tz)}
+            onOpenDetail={() => onOpenDetail({ kind: 'event', event: e, tz })}
+          />
+        ),
+      };
+    }
+    const it = row.task;
     const key = taskKey(it.source, it.externalTaskId);
     const t = taskByKey.get(key);
     // Reconciled 'done'/'stale' cards read faded + calm (never red). Iris 20 §7: a
@@ -1577,7 +1653,7 @@ function LaneBody({
           : unresolved
             ? 'removed at source'
             : null;
-    items.push({
+    return {
       sortId: key,
       node: (
         <SortableTaskCard
@@ -1610,8 +1686,8 @@ function LaneBody({
           moveNext={{ label: `Move ${title} to the next day`, onClick: () => onMoveNext(it) }}
         />
       ),
-    });
-  }
+    };
+  });
 
   // H3: the empty-lane treatment depends on the THREE calendar states.
   //   • loading      → render nothing (no warning, no skeleton flash) while the feed

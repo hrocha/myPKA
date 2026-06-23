@@ -178,8 +178,14 @@ export interface PlannerWeekDegraded {
 export type PlannerWeekResponse = PlannerWeekOk | PlannerWeekDegraded;
 
 // ---- write request bodies (snake_case — matches plannerRoutes validators) ---
-// Position is ALWAYS server-computed from neighbor ids; the client sends before_id
-// / after_id (plan_assignments row ids), NEVER a numeric position.
+// UNIFIED-SPACE CONTRACT (2026-06-23): the client computes the dropped task's target
+// `position` in the lane's unified events+tasks position space and sends it directly.
+// This replaces the old before_id/after_id neighbor-id scheme, which could only name
+// a PLAN ROW as a neighbor — and an event has no plan row, so a task could never be
+// ordered between a task and an event. The client knows every neighbor's position
+// (an event's is time-derived via eventPosition; a task's came down on the week
+// read), so it midpoints them itself. The server honors the value unless it collides
+// within MIN_GAP, then renormalizes the cell and re-derives the same rank.
 
 export interface AssignBody {
   week_start: string;        // ISO date; server snaps to Monday
@@ -187,13 +193,11 @@ export interface AssignBody {
   half: Half;
   source: string;            // a registered connector id
   external_task_id: string;
-  before_id?: number | null; // neighbor row id above the drop, or null/omitted
-  after_id?: number | null;  // neighbor row id below the drop, or null/omitted
+  position?: number | null;  // unified-space target; null/omitted → append to tail
 }
 export interface ReorderBody {
   id: number;                // the moved plan_assignments row id
-  before_id?: number | null;
-  after_id?: number | null;
+  position?: number | null;  // unified-space target; null/omitted → append to tail
 }
 export interface UnassignBody {
   source: string;

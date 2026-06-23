@@ -5,13 +5,20 @@
 // holds the placements as a flat list and exposes pure operations the UI mutates
 // optimistically, then persists via Mack's API.
 //
-// CORE INSIGHT (drop-index → neighbor ids): the server computes `position` from
-// before_id/after_id — we NEVER send a numeric position. So a drop resolves to:
-//   - the target lane's ordered list of *task* placements (meetings are anchors,
-//     not plan_assignments rows),
-//   - an insertion index within that ordered lane,
-//   - → beforeId = the row id immediately ABOVE the index, afterId = the row id
-//     immediately BELOW. Either may be null (top / bottom / empty lane).
+// CORE INSIGHT (unified-space drop, 2026-06-23): the lane is ONE comparable
+// position space spanning EVENTS (deterministic, time-derived, read-only anchors —
+// never plan rows) AND TASKS (stored REAL `position` in the same scale). A drop
+// resolves to:
+//   - the target lane's UNIFIED ordered position list (events@time-pos +
+//     tasks@stored-pos), self excluded,
+//   - an insertion index within that unified list,
+//   - → the target numeric `position` = the midpoint of the unified neighbor
+//     positions ABOVE and BELOW the index (or +/-1 at the head/tail). The client
+//     sends THAT position; the server honors it (or renormalizes on a rare
+//     collision). This is what lets a task land BELOW an event's time-position
+//     (e.g. 599.5 under a 10:00 event at 600) and persist there — the old
+//     before_id/after_id scheme could not name an event as a neighbor, so a task
+//     could never sit between a task and an event.
 //
 // Optimistic IDs: a freshly-dropped card has no server id yet. We assign a negative
 // temp id so the reducer can order/track it; on the server's echo we swap the temp
@@ -68,32 +75,21 @@ export function findPlacement(
   return state.items.find((it) => it.source === source && it.externalTaskId === externalTaskId);
 }
 
-// Given a target lane's ordered items and an insertion index, resolve the
-// neighbor row ids (excluding `selfId` so a move within a lane doesn't pick itself).
-export function neighborIdsAt(
-  lane: PlanItem[], index: number, selfId: number | null,
-): { beforeId: number | null; afterId: number | null } {
-  const others = selfId == null ? lane : lane.filter((it) => it.id !== selfId);
-  const clamped = Math.min(Math.max(index, 0), others.length);
-  const before = clamped > 0 ? others[clamped - 1] : null;
-  const after = clamped < others.length ? others[clamped] : null;
-  return { beforeId: before ? before.id : null, afterId: after ? after.id : null };
-}
-
-// Compute a fractional position from neighbor positions (mirrors the server's
-// (prev+next)/2 insert-between, O(1)). Used ONLY for optimistic local ordering;
-// the server recomputes authoritatively and echoes the real value.
-export function optimisticPosition(
-  lane: PlanItem[], beforeId: number | null, afterId: number | null,
-): number {
-  const posOf = (id: number | null) =>
-    id == null ? null : (lane.find((it) => it.id === id)?.position ?? null);
-  const before = posOf(beforeId);
-  const after = posOf(afterId);
-  if (before == null && after == null) return 1000;          // empty lane
-  if (before == null && after != null) return after - 1;     // top
-  if (before != null && after == null) return before + 1;    // bottom
-  return ((before as number) + (after as number)) / 2;       // between
+// Resolve the target numeric position for a unified-space drop. `unifiedPositions`
+// is the lane's full ordered list of neighbor positions (events@time-pos +
+// tasks@stored-pos), SELF ALREADY EXCLUDED, ascending. `index` is the insertion
+// slot within that list (0 = top, length = tail). The result is the midpoint of the
+// neighbors straddling the index, or +/-1 past the single neighbor at an edge, or a
+// seed for an empty lane. This is THE position the client sends to the server AND
+// uses for its own optimistic ordering, so the two never disagree.
+export function unifiedPositionAt(unifiedPositions: number[], index: number): number {
+  const clamped = Math.min(Math.max(index, 0), unifiedPositions.length);
+  const before = clamped > 0 ? unifiedPositions[clamped - 1] : null;
+  const after = clamped < unifiedPositions.length ? unifiedPositions[clamped] : null;
+  if (before == null && after == null) return 1000;       // empty lane seed
+  if (before == null && after != null) return after - 1;  // above the top neighbor
+  if (before != null && after == null) return before + 1; // below the bottom neighbor
+  return ((before as number) + (after as number)) / 2;    // between two neighbors
 }
 
 // ---- actions ----------------------------------------------------------------

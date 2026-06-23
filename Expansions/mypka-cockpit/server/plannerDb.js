@@ -134,34 +134,93 @@ function migrate(database) {
 migrate(db);
 
 // ============================================================================
-// Position helpers — fractional ranking (§2.3). Server-computed, ALWAYS.
+// Position — UNIFIED LANE SPACE (migration 008). Client-computed, server-guarded.
 // ============================================================================
+//
+// THE NEW CONTRACT (2026-06-23, unified events+tasks ordering). There is ONE
+// comparable position space per lane (week_start, weekday, half) spanning BOTH
+// events (deterministic, time-derived, NEVER stored — read-only calendar anchors)
+// and tasks (this stored REAL `position`). Events are positioned at their local
+// start minute-of-day (0..1439); tasks float in the SAME numeric space.
+//
+// WHY THE CLIENT SENDS THE POSITION NOW (not before_id/after_id). The old
+// neighbor-id scheme could only name a PLAN ROW as a neighbor — and an event has
+// no plan row, so it could never be a neighbor. That is the exact reason a task
+// could not be ordered between a task and an event. The client already knows
+// every neighbor's position in the unified space (an event's time-derived
+// position is computed client-side; a task's stored position came down on the
+// week read), so it computes the dropped task's target numeric position directly
+// and sends it. The server keeps O(1): validate a finite number, write it.
+//
+// SERVER GUARD (the precision backstop survives). The client's target may collide
+// with an existing row to within MIN_GAP (two very close fractional midpoints).
+// When that happens for THIS task's destination cell, the server renormalizes the
+// cell to clean stride-1 ranks, then re-derives a safe position from the client's
+// INTENT (where it wanted to sit relative to its neighbors). The client also sends
+// the optional neighbor positions (before_pos / after_pos) it used, purely so the
+// server can re-find that slot after a renormalize. They are advisory hints, never
+// trusted as ids — there is no DB lookup on them.
 
-const MIN_GAP = 1e-9; // below this, renormalize the cell rather than subdivide further.
+const MIN_GAP = 1e-6; // below this, renormalize the cell rather than trust the value.
+const EVENT_FLOOR = 1440.0; // positions >= this are "below every event" (1439 = 23:59).
+// (The old neighbor-id position reader was retired with the unified-space contract:
+// positions are now client-computed, so the server never resolves a neighbor row's
+// position by id. cellMaxStmt / cellPositionsStmt below cover the guard's needs.)
 
-// Read a single row's position by id (used to resolve before/after neighbors).
-const selPositionById = db.prepare(`SELECT position FROM plan_assignments WHERE id = @id`);
+// Clamp/validate a client-sent unified position to a finite REAL. Returns the
+// number, or null when it is not a usable finite value.
+function sanitizePosition(p) {
+  return typeof p === 'number' && Number.isFinite(p) ? p : null;
+}
 
-// Resolve the fractional position for a drop, given optional neighbor ids.
-//   - between two cards  -> (prev + next) / 2
-//   - at top (only afterId, or before the min) -> next - 1.0
-//   - at bottom (only beforeId, or append)      -> prev + 1.0
-//   - into an empty target where no neighbors given -> fallbackMax + 1.0 (or 1.0)
-// `cellMaxFallback` is the current max(position) of the destination cell, used
-// only when neither neighbor is supplied (append-to-cell / drop-into-empty).
-function computePosition({ beforeId, afterId, cellMaxFallback }) {
-  const prev = beforeId != null ? selPositionById.get({ id: beforeId })?.position : undefined;
-  const next = afterId != null ? selPositionById.get({ id: afterId })?.position : undefined;
+// All current positions in a cell, ascending (for collision + renormalize math).
+const cellPositionsStmt = db.prepare(`
+  SELECT id, position FROM plan_assignments
+  WHERE week_start = @week_start AND weekday = @weekday AND half = @half
+  ORDER BY position, id
+`);
 
-  if (prev != null && next != null) {
-    const gap = next - prev;
-    if (gap < MIN_GAP) return null; // signal: caller must renormalize the cell, then retry
-    return (prev + next) / 2.0;
+// Decide the final stored position for a unified-space drop.
+//   target   = the client's computed position in the unified lane space.
+//   excludeId= the moving row's own id (so a same-cell move ignores itself when
+//              checking for a collision); null for a brand-new placement.
+// Returns { position } to write, possibly AFTER renormalizing the cell. If the
+// target lands cleanly (no neighbor within MIN_GAP) we honor it verbatim — that
+// is the whole point: a position BELOW an event's time-position (e.g. 599.5 under
+// a 10:00 event at 600) persists exactly as the client intended.
+function resolveUnifiedPosition(database, cellKey, target, excludeId) {
+  const safe = sanitizePosition(target);
+  if (safe == null) {
+    // No usable target: append below everything (tail of the event-floor band).
+    const max = cellMaxStmt.get(cellKey)?.maxpos;
+    return { position: (max != null ? Math.max(max, EVENT_FLOOR) : EVENT_FLOOR) + 1.0 };
   }
-  if (prev != null) return prev + 1.0; // append after prev (bottom)
-  if (next != null) return next - 1.0; // prepend before next (top)
-  // No neighbors: append to the cell's current tail, or seed an empty cell.
-  return cellMaxFallback != null ? cellMaxFallback + 1.0 : 1.0;
+  const rows = cellPositionsStmt.all(cellKey).filter((r) => r.id !== excludeId);
+  // Collision check: is any OTHER row within MIN_GAP of the target? If not, the
+  // fractional space is healthy and we store the client's value as-is.
+  const tooClose = rows.some((r) => Math.abs(r.position - safe) < MIN_GAP);
+  if (!tooClose) return { position: safe };
+
+  // Precision backstop: the cell's fractional gaps collapsed around the target.
+  // Capture the intended RANK from the ORIGINAL positions FIRST (how many OTHER rows
+  // sit strictly below the client's target). `rows` is ascending and already excludes
+  // the moving row, so `below` is the 0-based slot the task wants among the others.
+  const below = rows.filter((r) => r.position < safe).length;
+  // Now renormalize the whole cell to clean stride-1 ranks (1.0, 2.0, 3.0…) in
+  // current order — this rebuilds EVERY row's number, including the moving row if it
+  // already lives here, but PRESERVES their relative order. We then re-read the cell
+  // (excluding the moving row again) and slot the task at the SAME rank index, so the
+  // move's meaning ("between these two neighbours") survives the renumber.
+  const ts = nowIso();
+  renormalizeCell(database, cellKey, ts);
+  const after = cellPositionsStmt.all(cellKey).filter((r) => r.id !== excludeId);
+  const idx = Math.min(below, after.length);
+  const prev = idx > 0 ? after[idx - 1].position : null;
+  const next = idx < after.length ? after[idx].position : null;
+  if (prev != null && next != null) return { position: (prev + next) / 2.0 };
+  if (prev != null) return { position: prev + 0.5 };
+  if (next != null) return { position: next - 0.5 };
+  return { position: 1.0 };
 }
 
 // Rewrite every row in a (week_start, weekday, half) cell to clean 1.0,2.0,3.0…
@@ -315,43 +374,37 @@ export function getWeek(weekStart) {
 }
 
 /**
- * assign({ weekStart, weekday, half, source, externalTaskId, beforeId, afterId })
- *   UPSERT on (source, external_task_id). `position` is server-computed from the
- *   neighbor ids in a SINGLE transaction (neighbor-read + write atomic). Idempotent:
- *   re-assigning the same task MOVES it, never duplicates.
+ * assign({ weekStart, weekday, half, source, externalTaskId, position })
+ *   UPSERT on (source, external_task_id). `position` is the client-computed target
+ *   in the UNIFIED lane space (events@time-pos + tasks@stored-pos). The server
+ *   honors it verbatim unless it collides with an existing row within MIN_GAP, in
+ *   which case it renormalizes the destination cell and re-derives a safe slot at
+ *   the same rank (all inside ONE transaction). Idempotent: re-assigning the same
+ *   task MOVES it (re-laning + repositioning), never duplicates.
  *
- *   beforeId = the card immediately ABOVE the drop slot (lower visual order).
- *   afterId  = the card immediately BELOW the drop slot.
- *   Either/both may be null (top / bottom / empty-cell drop).
+ *   position = a finite REAL; a task dropped ABOVE an event at time-position P is
+ *              sent with a position < P, below it with a position > P. May be
+ *              null/omitted for an append-to-tail drop (server picks the tail).
  *
  *   @returns the resulting row (post-upsert).
  */
-export function assign({ weekStart, weekday, half, source, externalTaskId, beforeId, afterId }) {
+export function assign({ weekStart, weekday, half, source, externalTaskId, position }) {
   const txn = db.transaction(() => {
     const ts = nowIso();
     const cellKey = { week_start: weekStart, weekday, half };
-    let position = computePosition({
-      beforeId,
-      afterId,
-      cellMaxFallback: cellMaxStmt.get(cellKey)?.maxpos ?? null,
-    });
-    if (position === null) {
-      // Fractional gap collapsed — renormalize the destination cell, then recompute.
-      renormalizeCell(db, cellKey, ts);
-      position = computePosition({
-        beforeId,
-        afterId,
-        cellMaxFallback: cellMaxStmt.get(cellKey)?.maxpos ?? null,
-      });
-      if (position === null) position = (cellMaxStmt.get(cellKey)?.maxpos ?? 0) + 1.0;
-    }
+    // A cross-lane move's old row still carries the natural key; exclude it from the
+    // destination-cell collision scan (it is not yet in this cell, but be safe — the
+    // exclude is a no-op when the row lives in another cell).
+    const existing = selByNaturalKeyStmt.get({ source, external_task_id: externalTaskId });
+    const { position: finalPosition } =
+      resolveUnifiedPosition(db, cellKey, position, existing?.id ?? null);
     upsertAssignStmt.run({
       week_start: weekStart,
       weekday,
       half,
       source,
       external_task_id: externalTaskId,
-      position,
+      position: finalPosition,
       updated_at: ts,
     });
     return selByNaturalKeyStmt.get({ source, external_task_id: externalTaskId });
@@ -360,34 +413,23 @@ export function assign({ weekStart, weekday, half, source, externalTaskId, befor
 }
 
 /**
- * reorder({ id, beforeId, afterId })
- *   Single-row position UPDATE within the same cell. `new_position` is
- *   server-computed from the neighbor ids inside ONE transaction, with the §2.3
- *   precision-renormalize fallback if the fractional gap collapses.
+ * reorder({ id, position })
+ *   Single-row position UPDATE within the row's existing cell. `position` is the
+ *   client-computed target in the UNIFIED lane space; the server honors it verbatim
+ *   unless it collides within MIN_GAP, in which case it renormalizes the cell and
+ *   re-derives a safe slot at the same rank (all inside ONE transaction). Used for a
+ *   SAME-LANE move (cross-lane moves route through assign, which re-lanes).
  *
  *   @returns the updated row.
  */
-export function reorder({ id, beforeId, afterId }) {
+export function reorder({ id, position }) {
   const txn = db.transaction(() => {
     const ts = nowIso();
     const row = selByIdStmt.get({ id });
     if (!row) return null; // nothing to reorder
     const cellKey = { week_start: row.week_start, weekday: row.weekday, half: row.half };
-    let position = computePosition({
-      beforeId,
-      afterId,
-      cellMaxFallback: cellMaxStmt.get(cellKey)?.maxpos ?? null,
-    });
-    if (position === null) {
-      renormalizeCell(db, cellKey, ts);
-      position = computePosition({
-        beforeId,
-        afterId,
-        cellMaxFallback: cellMaxStmt.get(cellKey)?.maxpos ?? null,
-      });
-      if (position === null) position = (cellMaxStmt.get(cellKey)?.maxpos ?? 0) + 1.0;
-    }
-    reorderStmt.run({ id, position, updated_at: ts });
+    const { position: finalPosition } = resolveUnifiedPosition(db, cellKey, position, id);
+    reorderStmt.run({ id, position: finalPosition, updated_at: ts });
     return selByIdStmt.get({ id });
   });
   return txn();

@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 The version in `expansion.yaml` is the single source of truth for a release; the
 root `package.json` and `package-lock.json` mirror it.
 
+## [1.2.1] - 2026-06-23
+
+### Fixed
+
+- **Drop a task before or after a calendar event in the day planner.** Events and
+  tasks now share one ordering space inside each day-half lane, so you can drop a
+  task ABOVE an event, not just below it. Previously the before/after model had no
+  way to name an event as a neighbour, so a task dropped above an event snapped
+  back below it on the next paint.
+- **Dragging a task up or down within the same column now sticks.** Reordering an
+  already-placed task inside its own column lands it at the new spot and persists
+  across reloads. Previously a same-column drag was silently a no-op because the
+  insert index ignored the drag direction.
+- **New migration `008-unified-position-space.sql`.** Introduces the unified
+  events+tasks position space behind the two fixes above. It applies automatically
+  on the next cockpit boot: the planner's built-in migration runner discovers
+  `migrations/NNN-*.sql` and applies any new ones in ascending order, idempotently,
+  inside a single transaction each. No manual step; nothing to run.
+
 ## [1.2.0] - 2026-06-23
 
 ### Changed

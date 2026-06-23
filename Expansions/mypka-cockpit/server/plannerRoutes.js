@@ -282,7 +282,10 @@ export function registerPlannerRoutes(app, deps) {
   // The cockpit's standard write guard stack, in order, behind the dormancy gate.
   const WRITE_STACK = [writeGate, requireSession, localWriteGuard, writeJson];
 
-  // POST /api/planner/assign  body { week_start, weekday, half, source, external_task_id, before_id?, after_id? }
+  // POST /api/planner/assign  body { week_start, weekday, half, source, external_task_id, position? }
+  // UNIFIED-SPACE CONTRACT (2026-06-23): `position` is the client-computed target in
+  // the lane's unified events+tasks position space (a task dropped above an event at
+  // time-position P arrives with position < P). Omitted/null → append to the tail.
   app.post('/api/planner/assign', ...WRITE_STACK, (req, res) => {
     const v = validateAssignBody(req.body);
     if (v.error) return res.status(400).json({ ok: false, error: v.error });
@@ -293,8 +296,7 @@ export function registerPlannerRoutes(app, deps) {
         half: halfToDb(v.half),
         source: v.source,
         externalTaskId: v.external_task_id,
-        beforeId: v.before_id,
-        afterId: v.after_id,
+        position: v.position,
       });
       return res.json({ ok: true, assignment: shapeRow(row) });
     } catch (err) {
@@ -303,12 +305,13 @@ export function registerPlannerRoutes(app, deps) {
     }
   });
 
-  // POST /api/planner/reorder  body { id, before_id?, after_id? }
+  // POST /api/planner/reorder  body { id, position }
+  // Same unified-space `position` contract; same-lane move only (cross-lane → assign).
   app.post('/api/planner/reorder', ...WRITE_STACK, (req, res) => {
     const v = validateReorderBody(req.body);
     if (v.error) return res.status(400).json({ ok: false, error: v.error });
     try {
-      const row = reorder({ id: v.id, beforeId: v.before_id, afterId: v.after_id });
+      const row = reorder({ id: v.id, position: v.position });
       if (!row) return res.status(404).json({ ok: false, error: 'assignment not found' });
       return res.json({ ok: true, assignment: shapeRow(row) });
     } catch (err) {
@@ -495,7 +498,7 @@ function rejectExtras(body, allowed) {
 }
 
 function validateAssignBody(body) {
-  const allowed = new Set(['week_start', 'weekday', 'half', 'source', 'external_task_id', 'before_id', 'after_id']);
+  const allowed = new Set(['week_start', 'weekday', 'half', 'source', 'external_task_id', 'position']);
   const extra = rejectExtras(body, allowed);
   if (extra) return { error: extra };
 
@@ -514,29 +517,27 @@ function validateAssignBody(body) {
   if (typeof body.external_task_id !== 'string' || !body.external_task_id.trim()) {
     return { error: 'external_task_id must be a non-empty string' };
   }
-  const before_id = normalizeNeighborId(body.before_id);
-  const after_id = normalizeNeighborId(body.after_id);
-  if (before_id === 'invalid' || after_id === 'invalid') {
-    return { error: 'before_id/after_id must be a positive integer or omitted' };
+  const position = normalizePosition(body.position);
+  if (position === 'invalid') {
+    return { error: 'position must be a finite number or omitted' };
   }
   return {
     week_start, weekday: body.weekday, half: body.half,
     source: body.source, external_task_id: body.external_task_id.trim(),
-    before_id, after_id,
+    position,
   };
 }
 
 function validateReorderBody(body) {
-  const allowed = new Set(['id', 'before_id', 'after_id']);
+  const allowed = new Set(['id', 'position']);
   const extra = rejectExtras(body, allowed);
   if (extra) return { error: extra };
   if (!Number.isInteger(body.id) || body.id <= 0) return { error: 'id must be a positive integer' };
-  const before_id = normalizeNeighborId(body.before_id);
-  const after_id = normalizeNeighborId(body.after_id);
-  if (before_id === 'invalid' || after_id === 'invalid') {
-    return { error: 'before_id/after_id must be a positive integer or omitted' };
+  const position = normalizePosition(body.position);
+  if (position === 'invalid') {
+    return { error: 'position must be a finite number or omitted' };
   }
-  return { id: body.id, before_id, after_id };
+  return { id: body.id, position };
 }
 
 function validateUnassignBody(body) {
@@ -685,11 +686,14 @@ function validateSettingsBody(body) {
   };
 }
 
-// Neighbor id: a positive integer (a plan_assignments.id), or null/undefined when
-// the drop is at top/bottom/empty-cell. Returns the int, null, or the sentinel
-// 'invalid'.
-function normalizeNeighborId(v) {
+// Unified-space target position: a finite number (the client's computed slot in
+// the lane's events+tasks position space), or null/undefined for an append-to-tail
+// drop. Returns the number, null, or the sentinel 'invalid'. The server (plannerDb
+// resolveUnifiedPosition) is the precision backstop, so we only reject NON-finite
+// junk here — any finite value (including a fractional position below an event's
+// time-position, e.g. 599.5) is legitimate.
+function normalizePosition(v) {
   if (v == null) return null;
-  if (Number.isInteger(v) && v > 0) return v;
+  if (typeof v === 'number' && Number.isFinite(v)) return v;
   return 'invalid';
 }

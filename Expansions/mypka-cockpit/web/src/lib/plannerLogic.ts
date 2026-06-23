@@ -9,9 +9,35 @@
 // All day/time math uses Europe/Berlin wall-clock via Intl, matching the server's
 // DISPLAY_TZ. We never trust the browser's local zone for bucketing.
 
-import type { PlannerSettings, Weekday } from './plannerTypes';
+import type { NormalizedEvent, PlannerSettings, Weekday } from './plannerTypes';
 
 export const DISPLAY_TZ = 'Europe/Berlin';
+
+// ---- unified lane position space (events + tasks) ---------------------------
+//
+// THE MODEL (2026-06-23, unified ordering fix). One comparable position space per
+// lane (weekday + half) spans BOTH events and tasks, so a task can be ordered
+// ABOVE an event and that order persists. The scale is "minutes since local
+// midnight": an event sits at its local START minute-of-day (0..1439); a task
+// floats at its stored REAL `position` in the SAME scale. A task dropped above a
+// 10:00 event (eventPosition 600) is stored < 600; below it, > 600.
+//
+// EVENT_FLOOR (1440) is "below every possible event" (1439 = 23:59). Pre-existing
+// tasks were rebased to >= EVENT_FLOOR by migration 008 so the upgrade preserves
+// their current below-the-events order; new drops can land anywhere in 0..1439.
+
+// An event sorts BELOW every task that was rebased to the event-floor band but
+// ABOVE nothing artificially — all-day events anchor at the very top of the lane.
+export const EVENT_FLOOR = 1440;
+const ALL_DAY_POSITION = -1; // all-day events pin to the top of their AM lane.
+
+// The deterministic position for an event in the unified lane space: its local
+// start minute-of-day (0..1439). All-day events return a sentinel that sorts first.
+// Stable across reloads (pure function of the event's start instant + tz).
+export function eventPosition(e: NormalizedEvent, tz: string = DISPLAY_TZ): number {
+  if (e.allDay) return ALL_DAY_POSITION;
+  return tzMinutesOfDay(new Date(e.start), tz);
+}
 
 export const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
 export const WEEKDAY_FULL = [
